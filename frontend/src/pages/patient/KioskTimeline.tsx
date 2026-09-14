@@ -22,18 +22,30 @@ export const KioskTimeline: React.FC = () => {
   const navigate = useNavigate();
   const { authData } = useKiosk();
 
-  // Default to mock patient 1 timeline, replaced by real backend data when available
-  const [events, setEvents] = useState(MOCK_PATIENTS[0].timeline);
+  const [events, setEvents] = useState<any[]>(() => [
+    {
+      id: 'tl_current',
+      date: 'Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      yearMonth: 'Sep 2026',
+      title: 'MediKiosk OPD Registration & Triage',
+      category: 'diagnosis',
+      facility: 'AIIMS Gate 2 OPD Kiosk',
+      summary: `${authData.name || 'Patient'} completed digital triage intake. Clinical history compiled for doctor review.`,
+      badgeText: 'Intake Completed',
+      isImportant: false
+    }
+  ]);
 
   useEffect(() => {
     const patId = authData.patientId || 'pat_001';
     api.getPatientTimeline(patId)
       .then(res => {
-        if (res?.timeline && res.timeline.length > 0) setEvents(res.timeline as any);
+        if (res?.timeline && Array.isArray(res.timeline) && res.timeline.length > 0) {
+          setEvents(res.timeline as any);
+        }
       })
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authData.patientId]);
 
   return (
     <div className="flex flex-col max-w-3xl w-full mx-auto py-4 space-y-6 animate-in fade-in duration-300">

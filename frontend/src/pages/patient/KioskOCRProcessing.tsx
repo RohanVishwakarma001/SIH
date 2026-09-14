@@ -18,15 +18,7 @@ export const KioskOCRProcessing: React.FC = () => {
   const navigate = useNavigate();
   const { ocrProgress, isOcrProcessing, activeOcrDoc } = useKiosk();
 
-  // If completed, let user proceed to document review
-  useEffect(() => {
-    if (ocrProgress === 100 && !isOcrProcessing) {
-      const timer = setTimeout(() => {
-        navigate('/patient/doc-review');
-      }, 900);
-      return () => clearTimeout(timer);
-    }
-  }, [ocrProgress, isOcrProcessing, navigate]);
+  // No auto-navigation timer: the patient explicitly reviews progress and clicks to proceed
 
   return (
     <div className="flex flex-col items-center justify-center max-w-xl mx-auto py-8 space-y-6 animate-in fade-in duration-300">

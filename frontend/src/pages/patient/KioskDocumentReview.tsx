@@ -96,38 +96,64 @@ export const KioskDocumentReview: React.FC = () => {
               </div>
             </div>
 
-            {/* Body of Prescription with simulated bounding highlights */}
+            {/* Body of Prescription with dynamic bounding highlights */}
             <div className="space-y-3 pt-1 text-med-text-primary leading-relaxed">
-              <div className="p-2 rounded bg-surface border border-med-green/30 relative">
-                <span className="text-[10px] uppercase font-bold text-med-green block">
-                  Detected Diagnosis
-                </span>
-                <span className="font-semibold text-sm">Essential Hypertension & Dyslipidemia</span>
-              </div>
+              {/* Document Image/Thumbnail if available */}
+              {doc.thumbnail && (doc.thumbnail.startsWith('data:image') || doc.thumbnail.startsWith('http') || doc.thumbnail.startsWith('/')) && (
+                <div className="rounded-lg overflow-hidden border border-border max-h-48 mb-2 bg-black/30 flex items-center justify-center">
+                  <img src={doc.thumbnail} alt={doc.title} className="max-h-48 object-contain w-full" />
+                </div>
+              )}
 
-              <div className="p-2 rounded bg-surface border border-med-green/30 relative space-y-1">
-                <span className="text-[10px] uppercase font-bold text-med-green block">
-                  Rx (Prescribed Medications)
-                </span>
-                <div className="space-y-1">
-                  <div className="flex justify-between font-semibold">
-                    <span>1. Tab. Telmisartan 40mg</span>
-                    <span className="text-med-green">PO OD</span>
-                  </div>
-                  <div className="flex justify-between font-semibold">
-                    <span>2. Tab. Atorvastatin 20mg</span>
-                    <span className="text-med-green">PO HS</span>
-                  </div>
-                  <div className="flex justify-between font-semibold">
-                    <span>3. Tab. Metformin 500mg</span>
-                    <span className="text-med-green">PO BD</span>
+              {/* Detected Diagnosis */}
+              {doc.entities.filter(e => e.category === 'diagnosis').length > 0 ? (
+                <div className="p-2.5 rounded bg-surface border border-med-green/30 relative">
+                  <span className="text-[10px] uppercase font-bold text-med-green block mb-1">
+                    Detected Diagnosis
+                  </span>
+                  {doc.entities.filter(e => e.category === 'diagnosis').map((e, idx) => (
+                    <div key={idx} className="font-semibold text-sm text-med-text-primary">{e.value}</div>
+                  ))}
+                </div>
+              ) : null}
+
+              {/* Prescribed Medications */}
+              {doc.entities.filter(e => e.category === 'medication').length > 0 ? (
+                <div className="p-2.5 rounded bg-surface border border-med-green/30 relative space-y-1.5">
+                  <span className="text-[10px] uppercase font-bold text-med-green block">
+                    Rx (Prescribed Medications)
+                  </span>
+                  <div className="space-y-1.5">
+                    {doc.entities.filter(e => e.category === 'medication').map((e, idx) => (
+                      <div key={idx} className="flex justify-between items-center font-semibold text-xs text-med-text-primary">
+                        <span>{idx + 1}. {e.value} {e.dosage ? `(${e.dosage})` : ''}</span>
+                        {e.frequency && <span className="text-med-green font-mono text-[11px]">{e.frequency}</span>}
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
+              ) : null}
 
-              <div className="p-2 rounded bg-surface border border-border text-[11px] text-med-text-secondary">
-                Advised: 12-Lead ECG, Lipid profile. Review in 4 weeks.
-              </div>
+              {/* Labs / Clinical observations */}
+              {doc.entities.filter(e => e.category !== 'diagnosis' && e.category !== 'medication').length > 0 ? (
+                <div className="p-2.5 rounded bg-surface border border-border text-[11px] text-med-text-secondary space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-med-text-muted block">
+                    Clinical Observations / Labs
+                  </span>
+                  {doc.entities.filter(e => e.category !== 'diagnosis' && e.category !== 'medication').map((e, idx) => (
+                    <div key={idx} className="flex justify-between text-xs">
+                      <span>{e.value}</span>
+                      {e.dosage && <span className="text-med-text-muted font-mono">{e.dosage}</span>}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {doc.entities.length === 0 && (
+                <div className="p-3 text-center text-med-text-muted text-xs">
+                  No entities extracted from this document yet.
+                </div>
+              )}
             </div>
 
             {/* OCR Confidence Tag */}

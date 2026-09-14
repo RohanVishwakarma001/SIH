@@ -77,7 +77,15 @@ export const api = {
   },
 
   async completeSession(sessionId: string) {
-    return apiClient.post(`/patient-sessions/${sessionId}/complete`);
+    return apiClient.post<{
+      token: string;
+      roomNo: string;
+      assignedDoctor: string;
+      waitTimeMins: number;
+      queuePosition: number;
+      qrCodeData: string;
+      completedAt: string;
+    }>(`/patient-sessions/${sessionId}/complete`, {});
   },
 
   // ==========================================
@@ -96,7 +104,7 @@ export const api = {
   },
 
   async revokeConsent(consentId: string) {
-    return apiClient.post(`/consents/${consentId}/revoke`);
+    return apiClient.post(`/consents/${consentId}/revoke`, {});
   },
 
   // ==========================================
@@ -184,7 +192,7 @@ export const api = {
   },
 
   async getOcrExtraction(documentId: string) {
-    return apiClient.get(`/ocr/${documentId}/extraction`);
+    return apiClient.get<{ documentId: string; rawText?: string; confidenceScore?: number; entities: any[] }>(`/ocr/${documentId}/extraction`);
   },
 
   async correctEntity(documentId: string, entityId: string, correctedValue: string) {

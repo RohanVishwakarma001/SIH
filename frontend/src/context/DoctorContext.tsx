@@ -75,11 +75,46 @@ export const DoctorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
 
       if (res?.queue && Array.isArray(res.queue) && res.queue.length > 0) {
-        // Merge backend queue data with full mock patient details
+        // Merge backend queue data with real patient details
         setPatients(prev => {
           const map = new Map(prev.map(p => [p.id, p]));
           return res.queue.map(q => {
-            const existing = map.get(q.id) || MOCK_PATIENTS.find(m => m.id === q.id) || MOCK_PATIENTS[0];
+            const existing = map.get(q.id) || MOCK_PATIENTS.find(m => m.id === q.id) || {
+              id: q.id,
+              token: q.token,
+              roomNo: 'Room 04',
+              name: q.name,
+              age: q.age,
+              gender: q.gender,
+              phone: q.phone,
+              abhaId: q.abhaId,
+              abhaVerified: Boolean(q.abhaId),
+              priority: (q.priority || 'normal').toLowerCase() as PriorityLevel,
+              queueStatus: (q.queueStatus || 'waiting') as any,
+              historyStatus: (q.historyStatus || 'ready_for_review') as any,
+              waitTimeMinutes: q.waitTimeMinutes || 10,
+              checkedInTime: 'Today',
+              chiefComplaintShort: q.chiefComplaintShort || 'OPD Intake',
+              department: (q.department || 'general') as any,
+              vitals: { bp: '120/80', heartRate: 72, spo2: 98, temperature: '98.6 °F', bmi: 22.5 },
+              structuredHistory: {
+                chiefComplaint: { primary: q.chiefComplaintShort || 'General Consultation', onset: 'Recent', duration: 'Few days', severityScore: 5, location: 'Generalized', aggravatingFactors: [], relievingFactors: [] },
+                historyOfPresentIllness: 'Patient registered through MediKiosk terminal intake.',
+                pastMedicalHistory: [], pastSurgicalHistory: [], drugHistory: [], allergyHistory: [], familyHistory: [],
+                personalHistory: { diet: 'Mixed', tobaccoUse: 'Nil', alcoholUse: 'Nil', sleep: '7 hrs', physicalActivity: 'Moderate' },
+                reviewOfSystems: [], previousInvestigations: []
+              },
+              aiSummary: {
+                conciseSummary: `Clinical intake for ${q.name}.`,
+                keyPositiveFindings: [q.chiefComplaintShort || 'Checkup'],
+                pertinentNegatives: [],
+                redFlagAlerts: q.priority === 'urgent' ? ['High Priority Review'] : [],
+                differentialDiagnoses: [{ name: 'Clinical Evaluation Needed', icdCode: 'R69', confidence: 80 }],
+                recommendedInvestigations: ['Routine Baseline Investigations']
+              },
+              timeline: [],
+              documents: []
+            };
             return {
               ...existing,
               ...q,

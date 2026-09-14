@@ -54,12 +54,15 @@ export const KioskInterview: React.FC = () => {
   const nativeQuestionText = currentQ.nativeQuestion?.[language] || currentQ.question;
   const currentAnswer = answers[currentQ.id];
 
-  // If red-flag triggered during answer selection, redirect to red-flag screen
+  // Keep state active without forced auto-navigation
+  // Red flag notifications will display on-screen with explicit user choice
+  const [showRedFlagBanner, setShowRedFlagBanner] = useState<boolean>(false);
+
   useEffect(() => {
     if (isRedFlagTriggered) {
-      navigate('/patient/red-flag');
+      setShowRedFlagBanner(true);
     }
-  }, [isRedFlagTriggered, navigate]);
+  }, [isRedFlagTriggered]);
 
   // Speak question aloud when step changes
   useEffect(() => {
@@ -105,6 +108,43 @@ export const KioskInterview: React.FC = () => {
         </div>
         <Progress value={progressPercent} color="green" size="md" />
       </div>
+
+      {/* Immediate Clinical Red Flag Notification (User-Controlled) */}
+      {showRedFlagBanner && (
+        <div className="p-4 rounded-xl bg-red-500/10 border-2 border-red-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-sm text-red-400">
+                Critical Red Flag Symptom Detected / तत्काल ध्यान दें
+              </div>
+              <div className="text-xs text-med-text-secondary">
+                Your response indicates symptoms that require immediate clinical priority review.
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => navigate('/patient/red-flag')}
+              className="text-xs font-bold"
+            >
+              Go to Priority Triage
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowRedFlagBanner(false)}
+              className="text-xs"
+            >
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* AI Assistant Question Card (HERO ELEMENT) */}
       <Card className="p-6 sm:p-8 bg-surface-elevated border-border shadow-surface relative overflow-hidden">

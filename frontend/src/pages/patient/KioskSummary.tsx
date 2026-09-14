@@ -17,25 +17,28 @@ import { useKiosk } from '../../context/KioskContext';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { MOCK_PATIENTS } from '../../data/mockData';
+import { StructuredClinicalHistory } from '../../types';
 import { api } from '../../services/api';
 
 export const KioskSummary: React.FC = () => {
   const navigate = useNavigate();
   const { department, authData, getStructuredSummary } = useKiosk();
-
   const isAyush = department === 'ayush';
-  const [history, setHistory] = useState(isAyush ? MOCK_PATIENTS[2].structuredHistory : MOCK_PATIENTS[0].structuredHistory);
+
+  const [history, setHistory] = useState<StructuredClinicalHistory>(() => getStructuredSummary());
 
   useEffect(() => {
-    const patId = authData.patientId || 'pat_001';
-    api.getStructuredHistory(patId)
-      .then(res => {
-        if (res?.history) setHistory(res.history as any);
-      })
-      .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // Dynamically update structured summary from active answers
+    setHistory(getStructuredSummary());
+
+    if (authData.patientId) {
+      api.getStructuredHistory(authData.patientId)
+        .then(res => {
+          if (res?.history) setHistory(res.history as any);
+        })
+        .catch(() => {});
+    }
+  }, [authData.patientId]);
 
   return (
     <div className="flex flex-col max-w-4xl w-full mx-auto py-4 space-y-6 animate-in fade-in duration-300">

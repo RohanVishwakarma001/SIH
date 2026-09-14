@@ -8,7 +8,9 @@ import {
   CheckCircle2, 
   KeyRound,
   IdCard,
-  Sparkles
+  Sparkles,
+  AlertCircle,
+  FlaskConical
 } from 'lucide-react';
 import { useKiosk, PatientAuthData } from '../../context/KioskContext';
 import { useAccessibility } from '../../context/AccessibilityContext';
@@ -18,64 +20,163 @@ import { api } from '../../services/api';
 
 export const KioskAuth: React.FC = () => {
   const navigate = useNavigate();
-  const { authData, setAuthData, language } = useKiosk();
+  const { setAuthData, language } = useKiosk();
   const { speakText } = useAccessibility();
 
   const [authMethod, setAuthMethod] = useState<'abha' | 'mobile' | 'walkin'>('abha');
-  const [abhaInput, setAbhaInput] = useState<string>('91-4829-1029-4412');
-  const [mobileInput, setMobileInput] = useState<string>('9811243210');
-  const [otpInput, setOtpInput] = useState<string>('4829');
-  const [isOtpSent, setIsOtpSent] = useState<boolean>(true);
+  
+  // Clean empty input states (no pre-filled demo data)
+  const [abhaInput, setAbhaInput] = useState<string>('');
+  const [mobileInput, setMobileInput] = useState<string>('');
+  const [otpInput, setOtpInput] = useState<string>('');
+  const [isOtpSent, setIsOtpSent] = useState<boolean>(false);
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Walk-in form states
-  const [walkinName, setWalkinName] = useState<string>('Rameshwar Prasad Patel');
-  const [walkinAge, setWalkinAge] = useState<number>(58);
+  const [walkinName, setWalkinName] = useState<string>('');
+  const [walkinAge, setWalkinAge] = useState<string>('');
   const [walkinGender, setWalkinGender] = useState<'Male' | 'Female' | 'Other'>('Male');
+  const [walkinMobile, setWalkinMobile] = useState<string>('');
+
+  // Convenient demo test helper
+  const handleQuickDemoFill = () => {
+    setErrorMessage(null);
+    if (authMethod === 'abha') {
+      setAbhaInput('91-4829-1029-4412');
+      setOtpInput('4829');
+      setIsOtpSent(true);
+    } else if (authMethod === 'mobile') {
+      setMobileInput('9811243210');
+      setOtpInput('4829');
+      setIsOtpSent(true);
+    } else {
+      setWalkinName('Rameshwar Prasad Patel');
+      setWalkinAge('58');
+      setWalkinGender('Male');
+      setWalkinMobile('9811243210');
+    }
+  };
+
+  const handleSendOtp = () => {
+    setErrorMessage(null);
+    if (authMethod === 'abha') {
+      const cleanAbha = abhaInput.replace(/[^0-9-]/g, '');
+      if (cleanAbha.length < 10) {
+        setErrorMessage(language === 'hi' ? 'कृपया एक वैध 14-अंकीय आभा संख्या दर्ज करें।' : 'Please enter a valid 14-digit ABHA Number.');
+        return;
+      }
+      setIsOtpSent(true);
+      speakText(language === 'hi' ? 'ओटीपी भेजा गया है। कोड दर्ज करें।' : 'OTP sent to registered mobile. Please enter code.', language);
+    } else if (authMethod === 'mobile') {
+      const cleanPhone = mobileInput.replace(/[^0-9]/g, '');
+      if (cleanPhone.length !== 10) {
+        setErrorMessage(language === 'hi' ? 'कृपया 10-अंकों का मान्य मोबाइल नंबर दर्ज करें।' : 'Please enter a valid 10-digit mobile number.');
+        return;
+      }
+      setIsOtpSent(true);
+      speakText(language === 'hi' ? 'ओटीपी भेजा गया है। कोड दर्ज करें।' : 'OTP sent to your mobile. Please enter code.', language);
+    }
+  };
 
   const handleVerifyAndProceed = async () => {
-    setIsVerifying(true);
-    speakText(language === 'hi' ? 'पहचान सत्यापित हो गई है। कृपया सहमति पृष्ठ पर आगे बढ़ें।' : 'Identity verified successfully. Proceeding to consent.', language);
+    setErrorMessage(null);
 
-    const fallbackAuthData: PatientAuthData = {
-      method: authMethod,
-      abhaId: authMethod === 'abha' ? abhaInput : undefined,
-      mobile: authMethod === 'mobile' ? mobileInput : authData.mobile,
-      name: authMethod === 'walkin' ? walkinName : 'Rameshwar Prasad Patel',
-      age: authMethod === 'walkin' ? walkinAge : 58,
-      gender: authMethod === 'walkin' ? walkinGender : 'Male',
-      abhaVerified: authMethod === 'abha'
-    };
+    // Validation
+    if (authMethod === 'abha') {
+      if (!abhaInput.trim()) {
+        setErrorMessage(language === 'hi' ? 'कृपया अपनी आभा संख्या दर्ज करें।' : 'Please enter your ABHA number.');
+        return;
+      }
+      if (!otpInput.trim()) {
+        setErrorMessage(language === 'hi' ? 'कृपया प्राप्त ओटीपी दर्ज करें (उदा. 4829)।' : 'Please enter the verification OTP (e.g. 4829).');
+        return;
+      }
+    } else if (authMethod === 'mobile') {
+      if (!mobileInput.trim() || mobileInput.replace(/[^0-9]/g, '').length !== 10) {
+        setErrorMessage(language === 'hi' ? 'कृपया 10-अंकों का वैध मोबाइल नंबर दर्ज करें।' : 'Please enter a valid 10-digit mobile number.');
+        return;
+      }
+      if (!otpInput.trim()) {
+        setErrorMessage(language === 'hi' ? 'कृपया प्राप्त ओटीपी दर्ज करें (उदा. 4829)।' : 'Please enter the verification OTP (e.g. 4829).');
+        return;
+      }
+    } else if (authMethod === 'walkin') {
+      if (!walkinName.trim()) {
+        setErrorMessage(language === 'hi' ? 'कृपया मरीज़ का पूरा नाम दर्ज करें।' : 'Please enter patient full name.');
+        return;
+      }
+      const ageNum = parseInt(walkinAge, 10);
+      if (isNaN(ageNum) || ageNum <= 0 || ageNum > 125) {
+        setErrorMessage(language === 'hi' ? 'कृपया मान्य उम्र दर्ज करें।' : 'Please enter a valid age.');
+        return;
+      }
+    }
+
+    setIsVerifying(true);
 
     try {
-      let result: { patient: any };
+      let verifiedPatient: any = null;
+      let token: string | undefined;
+
       if (authMethod === 'abha') {
-        result = await api.verifyAbha(abhaInput, otpInput);
+        const res = await api.verifyAbha(abhaInput.trim(), otpInput.trim());
+        verifiedPatient = res.patient;
+        token = res.token;
       } else if (authMethod === 'mobile') {
-        result = await api.verifyMobile(mobileInput, otpInput);
+        const res = await api.verifyMobile(mobileInput.trim(), otpInput.trim());
+        verifiedPatient = res.patient;
+        token = res.token;
       } else {
-        result = await api.registerWalkin({ name: walkinName, age: walkinAge, gender: walkinGender, mobile: undefined });
+        const res = await api.registerWalkin({
+          name: walkinName.trim(),
+          age: parseInt(walkinAge, 10),
+          gender: walkinGender,
+          mobile: walkinMobile.trim() ? `+91 ${walkinMobile.trim()}` : undefined
+        });
+        verifiedPatient = res.patient;
+        token = res.token;
       }
 
-      setAuthData({
-        ...fallbackAuthData,
-        name: result.patient?.name || fallbackAuthData.name,
-        age: result.patient?.age ?? fallbackAuthData.age,
-        gender: result.patient?.gender || fallbackAuthData.gender,
-        patientId: result.patient?.id,
-        token: result.patient?.token,
-      });
-    } catch {
-      // Offline fallback: proceed locally without a verified backend patient id
-      setAuthData(fallbackAuthData);
+      if (!verifiedPatient) {
+        throw new Error('Could not verify or register patient record.');
+      }
+
+      // Populate Kiosk context with real patient record
+      const realAuthData: PatientAuthData = {
+        method: authMethod,
+        abhaId: verifiedPatient.abhaId || (authMethod === 'abha' ? abhaInput : undefined),
+        mobile: verifiedPatient.phone || mobileInput,
+        name: verifiedPatient.name || walkinName,
+        age: verifiedPatient.age || parseInt(walkinAge, 10) || 30,
+        gender: (verifiedPatient.gender as any) || walkinGender || 'Male',
+        abhaVerified: verifiedPatient.abhaVerified || (authMethod === 'abha'),
+        patientId: verifiedPatient.id,
+        token: token || verifiedPatient.token,
+      };
+
+      setAuthData(realAuthData);
+
+      speakText(
+        language === 'hi'
+          ? `${realAuthData.name} का सत्यापन सफल हुआ।`
+          : `Patient ${realAuthData.name} verified successfully.`,
+        language
+      );
+
+      // Navigate ONLY after successful backend verification
+      navigate('/patient/consent');
+    } catch (err: any) {
+      console.error('Patient check-in error:', err);
+      const friendlyMsg = err?.message || 'Verification failed. Please check credentials or try again.';
+      setErrorMessage(friendlyMsg);
     } finally {
       setIsVerifying(false);
-      navigate('/patient/consent');
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center max-w-2xl mx-auto py-6 space-y-8 animate-in fade-in duration-300">
+    <div className="flex flex-col items-center justify-center max-w-2xl mx-auto py-6 space-y-6 animate-in fade-in duration-300">
       {/* Title */}
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-elevated border border-border text-xs font-semibold text-med-text-secondary">
@@ -86,14 +187,14 @@ export const KioskAuth: React.FC = () => {
           Patient Check-In / मरीज़ पहचान
         </h1>
         <p className="text-sm text-med-text-secondary">
-          Select your check-in method to retrieve prior records or create a new OPD token.
+          Select check-in method to retrieve prior health records or create a new OPD token.
         </p>
       </div>
 
       {/* Tabs for Login Type */}
       <div className="grid grid-cols-3 gap-2 w-full p-1.5 bg-surface-elevated rounded-2xl border border-border">
         <button
-          onClick={() => setAuthMethod('abha')}
+          onClick={() => { setAuthMethod('abha'); setErrorMessage(null); }}
           className={`py-3 px-2 rounded-xl text-xs sm:text-sm font-bold flex flex-col sm:flex-row items-center justify-center gap-2 transition-all ${
             authMethod === 'abha'
               ? 'bg-med-green text-background shadow-glow-green-sm'
@@ -105,7 +206,7 @@ export const KioskAuth: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setAuthMethod('mobile')}
+          onClick={() => { setAuthMethod('mobile'); setErrorMessage(null); }}
           className={`py-3 px-2 rounded-xl text-xs sm:text-sm font-bold flex flex-col sm:flex-row items-center justify-center gap-2 transition-all ${
             authMethod === 'mobile'
               ? 'bg-med-green text-background shadow-glow-green-sm'
@@ -117,7 +218,7 @@ export const KioskAuth: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setAuthMethod('walkin')}
+          onClick={() => { setAuthMethod('walkin'); setErrorMessage(null); }}
           className={`py-3 px-2 rounded-xl text-xs sm:text-sm font-bold flex flex-col sm:flex-row items-center justify-center gap-2 transition-all ${
             authMethod === 'walkin'
               ? 'bg-med-green text-background shadow-glow-green-sm'
@@ -131,6 +232,29 @@ export const KioskAuth: React.FC = () => {
 
       {/* Form Container */}
       <Card className="w-full p-6 sm:p-8 space-y-6 bg-surface-elevated border-border">
+        {/* Quick Demo Helper */}
+        <div className="flex items-center justify-between pb-3 border-b border-border/80">
+          <span className="text-xs text-med-text-muted">Enter your actual patient details:</span>
+          <button
+            type="button"
+            onClick={handleQuickDemoFill}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-med-green/10 hover:bg-med-green/20 text-med-green border border-med-green/30 text-xs font-semibold transition-all"
+            title="Auto-fill sample test credentials"
+          >
+            <FlaskConical className="w-3.5 h-3.5" />
+            <span>Fill Demo Credentials</span>
+          </button>
+        </div>
+
+        {/* Inline Error Banner */}
+        {errorMessage && (
+          <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-2 text-xs text-red-300">
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {/* Tab 1: ABHA Verification */}
         {authMethod === 'abha' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -138,7 +262,7 @@ export const KioskAuth: React.FC = () => {
                 <span>14-Digit ABHA Number / आभा संख्या</span>
               </label>
               <span className="text-[11px] px-2 py-0.5 rounded bg-med-green/10 text-med-green border border-med-green/20 font-semibold flex items-center gap-1">
-                <Sparkles className="w-3 h-3" /> ABDM Linked
+                <Sparkles className="w-3.5 h-3.5" /> ABDM Linked
               </span>
             </div>
 
@@ -146,49 +270,51 @@ export const KioskAuth: React.FC = () => {
               <input
                 type="text"
                 value={abhaInput}
-                onChange={e => setAbhaInput(e.target.value)}
-                placeholder="XX-XXXX-XXXX-XXXX"
+                onChange={e => {
+                  setAbhaInput(e.target.value);
+                  setErrorMessage(null);
+                }}
+                placeholder="e.g. 91-4829-1029-4412"
                 className="w-full h-14 px-4 text-xl font-mono tracking-wider bg-surface rounded-xl border border-border focus:border-med-green focus:ring-1 focus:ring-med-green outline-none text-med-text-primary"
               />
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-med-green flex items-center gap-1 text-xs font-semibold">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Verified Record</span>
-              </div>
             </div>
 
-            {/* Found Record Profile Preview */}
-            <div className="p-4 rounded-xl bg-surface border border-med-green/30 flex items-center justify-between">
-              <div>
-                <div className="font-bold text-base text-med-text-primary">Rameshwar Prasad Patel</div>
-                <div className="text-xs text-med-text-secondary">58 Years • Male • +91 98112 43210</div>
-                <div className="text-[11px] text-med-green font-mono mt-0.5">rameshwar.patel@abdm</div>
+            {/* OTP Section */}
+            <div className="space-y-2 pt-2 border-t border-border/60">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-med-text-secondary">
+                  Authentication OTP sent to Aadhaar-linked mobile:
+                </label>
+                {!isOtpSent && (
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    className="text-xs text-med-green hover:underline font-semibold"
+                  >
+                    Request OTP
+                  </button>
+                )}
               </div>
-              <div className="text-right">
-                <span className="px-2 py-1 rounded bg-med-green/15 text-med-green text-xs font-bold border border-med-green/30">
-                  ABDM Verified
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-med-text-secondary">
-                Authentication OTP sent to registered mobile (Demo auto-filled):
-              </label>
               <div className="flex items-center gap-3">
                 <input
                   type="text"
                   value={otpInput}
-                  onChange={e => setOtpInput(e.target.value)}
+                  onChange={e => {
+                    setOtpInput(e.target.value);
+                    setErrorMessage(null);
+                  }}
+                  placeholder="4829"
                   className="w-36 h-12 text-center text-xl font-mono tracking-widest bg-surface rounded-xl border border-border text-med-text-primary focus:border-med-green outline-none"
                 />
                 <span className="text-xs text-med-text-muted flex items-center gap-1">
-                  <KeyRound className="w-3.5 h-3.5 text-med-green" /> OTP 4829 verified
+                  <KeyRound className="w-3.5 h-3.5 text-med-green" /> (Test OTP: 4829)
                 </span>
               </div>
             </div>
           </div>
         )}
 
+        {/* Tab 2: Mobile OTP Verification */}
         {authMethod === 'mobile' && (
           <div className="space-y-4">
             <label className="text-sm font-bold text-med-text-primary">
@@ -201,43 +327,84 @@ export const KioskAuth: React.FC = () => {
               <input
                 type="text"
                 value={mobileInput}
-                onChange={e => setMobileInput(e.target.value)}
-                placeholder="Enter 10 digit mobile"
+                onChange={e => {
+                  setMobileInput(e.target.value);
+                  setErrorMessage(null);
+                }}
+                placeholder="Enter 10-digit mobile (e.g. 9811243210)"
                 className="flex-1 h-14 px-4 text-xl font-mono bg-surface rounded-xl border border-border focus:border-med-green outline-none text-med-text-primary"
               />
             </div>
-            <div className="flex items-center justify-between text-xs text-med-text-secondary pt-2">
-              <span>Demo OTP: 4829 (Valid for 5 mins)</span>
-              <button className="text-med-green hover:underline">Resend OTP</button>
+
+            {/* OTP Section */}
+            <div className="space-y-2 pt-2 border-t border-border/60">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-med-text-secondary">
+                  Enter 4-Digit OTP:
+                </label>
+                {!isOtpSent && (
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    className="text-xs text-med-green hover:underline font-semibold"
+                  >
+                    Send OTP
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  value={otpInput}
+                  onChange={e => {
+                    setOtpInput(e.target.value);
+                    setErrorMessage(null);
+                  }}
+                  placeholder="4829"
+                  className="w-36 h-12 text-center text-xl font-mono tracking-widest bg-surface rounded-xl border border-border text-med-text-primary focus:border-med-green outline-none"
+                />
+                <span className="text-xs text-med-text-muted flex items-center gap-1">
+                  <KeyRound className="w-3.5 h-3.5 text-med-green" /> (Test OTP: 4829)
+                </span>
+              </div>
             </div>
           </div>
         )}
 
+        {/* Tab 3: Walk-in Registration */}
         {authMethod === 'walkin' && (
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-bold text-med-text-secondary">Full Name / पूरा नाम</label>
+              <label className="text-xs font-bold text-med-text-secondary">Full Name / पूरा नाम *</label>
               <input
                 type="text"
                 value={walkinName}
-                onChange={e => setWalkinName(e.target.value)}
+                onChange={e => {
+                  setWalkinName(e.target.value);
+                  setErrorMessage(null);
+                }}
+                placeholder="e.g. Rameshwar Prasad Patel"
                 className="w-full h-12 px-4 mt-1 bg-surface rounded-xl border border-border text-med-text-primary outline-none focus:border-med-green"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-med-text-secondary">Age / उम्र</label>
+                <label className="text-xs font-bold text-med-text-secondary">Age / उम्र *</label>
                 <input
                   type="number"
                   value={walkinAge}
-                  onChange={e => setWalkinAge(Number(e.target.value))}
+                  onChange={e => {
+                    setWalkinAge(e.target.value);
+                    setErrorMessage(null);
+                  }}
+                  placeholder="e.g. 58"
                   className="w-full h-12 px-4 mt-1 bg-surface rounded-xl border border-border text-med-text-primary outline-none focus:border-med-green"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-med-text-secondary">Gender / लिंग</label>
+                <label className="text-xs font-bold text-med-text-secondary">Gender / लिंग *</label>
                 <select
                   value={walkinGender}
                   onChange={e => setWalkinGender(e.target.value as any)}
@@ -248,6 +415,17 @@ export const KioskAuth: React.FC = () => {
                   <option value="Other">Other (अन्य)</option>
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-med-text-secondary">Contact Mobile (Optional) / मोबाइल</label>
+              <input
+                type="text"
+                value={walkinMobile}
+                onChange={e => setWalkinMobile(e.target.value)}
+                placeholder="10-digit mobile number"
+                className="w-full h-12 px-4 mt-1 bg-surface rounded-xl border border-border text-med-text-primary outline-none focus:border-med-green"
+              />
             </div>
           </div>
         )}
@@ -261,7 +439,7 @@ export const KioskAuth: React.FC = () => {
           onClick={handleVerifyAndProceed}
           rightIcon={<ArrowRight className="w-5 h-5" />}
         >
-          Verify & Continue / सत्यापित कर आगे बढ़ें
+          {authMethod === 'walkin' ? 'Register & Check In / पंजीकरण करें' : 'Verify & Continue / सत्यापित कर आगे बढ़ें'}
         </Button>
       </Card>
     </div>

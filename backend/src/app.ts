@@ -49,6 +49,19 @@ export async function buildApp(): Promise<FastifyInstance> {
     timeWindow: '1 minute',
   });
 
+  // Support empty JSON bodies gracefully across POST/PATCH endpoints
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body: string, done) => {
+    if (!body || body.trim() === '') {
+      done(null, {});
+      return;
+    }
+    try {
+      done(null, JSON.parse(body));
+    } catch (err: any) {
+      done(err, undefined);
+    }
+  });
+
   // Swagger Documentation (on by default in development, off in production unless ENABLE_SWAGGER=true)
   if (env.ENABLE_SWAGGER) {
     await app.register(swagger, {
