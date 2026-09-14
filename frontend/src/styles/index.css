@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #0B0F0E;
+    --bg-secondary: #111715;
+    --surface: #151C19;
+    --surface-elevated: #1A2420;
+    --border-color: #26322D;
+    --text-primary: #F2F5F3;
+    --text-secondary: #A8B3AE;
+    --text-muted: #71807A;
+    --green-primary: #35D07F;
+    --green-secondary: #6EE7A5;
+    --green-soft: #A7F3C5;
+  }
+
+  * {
+    border-color: #26322D;
+  }
+
+  body {
+    background-color: #0B0F0E;
+    color: #F2F5F3;
+    background-image: 
+      radial-gradient(circle at 15% 10%, rgba(53, 208, 127, 0.04) 0%, transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(53, 208, 127, 0.03) 0%, transparent 45%),
+      radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.02) 0%, transparent 60%);
+    background-attachment: fixed;
+  }
+}
+
+/* Accessibility Modes */
+body.mode-large-text {
+  font-size: 1.15rem;
+}
+
+body.mode-large-text .kiosk-text-lg {
+  font-size: 1.85rem !important;
+}
+
+body.mode-large-text .kiosk-text-title {
+  font-size: 2.5rem !important;
+}
+
+body.mode-high-contrast {
+  --bg-primary: #000000;
+  --surface: #0A0A0A;
+  --surface-elevated: #141414;
+  --border-color: #4B5563;
+  --text-primary: #FFFFFF;
+  --text-secondary: #E5E7EB;
+  --green-primary: #00FF66;
+}
+
+body.mode-high-contrast * {
+  border-color: #4B5563 !important;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #111715;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #26322D;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #364640;
+}
+
+/* Pulse Glow Keyframes */
+@keyframes subtle-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px -5px rgba(53, 208, 127, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px 2px rgba(53, 208, 127, 0.35);
+  }
+}
+
+.animate-subtle-glow {
+  animation: subtle-glow 3s ease-in-out infinite;
+}
+
+@keyframes wave-bar {
+  0%, 100% {
+    height: 8px;
+  }
+  50% {
+    height: 38px;
+  }
+}
+
+.wave-animation-1 { animation: wave-bar 0.9s ease-in-out infinite 0.1s; }
+.wave-animation-2 { animation: wave-bar 0.9s ease-in-out infinite 0.25s; }
+.wave-animation-3 { animation: wave-bar 0.9s ease-in-out infinite 0.4s; }
+.wave-animation-4 { animation: wave-bar 0.9s ease-in-out infinite 0.15s; }
+.wave-animation-5 { animation: wave-bar 0.9s ease-in-out infinite 0.3s; }
+.wave-animation-6 { animation: wave-bar 0.9s ease-in-out infinite 0.5s; }
+.wave-animation-7 { animation: wave-bar 0.9s ease-in-out infinite 0.2s; }
+
+/* Subtle scanning line for OCR */
+@keyframes scan-line {
+  0% {
+    top: 0%;
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0.2;
+  }
+}
+
+.animate-scan {
+  animation: scan-line 2.5s ease-in-out infinite;
+}
