@@ -27,7 +27,10 @@ export const DoctorDashboard: React.FC = () => {
     selectPatientById,
     filterPriority,
     setFilterPriority,
-    searchQuery
+    searchQuery,
+    isLoadingQueue,
+    queueError,
+    refreshQueue
   } = useDoctor();
 
   const [metrics, setMetrics] = useState<{ todaysTotalOpd: number; completedHistoriesCount: number; completionRatePct: number; avgIntakeMinutes: number; timeSavedMinutesPerPatient: number } | null>(null);
@@ -204,6 +207,35 @@ export const DoctorDashboard: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
+              {isLoadingQueue && patients.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="py-10 text-center text-med-text-muted">
+                    Loading OPD queue…
+                  </td>
+                </tr>
+              )}
+
+              {!isLoadingQueue && queueError && (
+                <tr>
+                  <td colSpan={9} className="py-10 text-center text-red-400">
+                    <div className="flex flex-col items-center gap-2">
+                      <span>{queueError}</span>
+                      <Button variant="secondary" size="sm" onClick={() => refreshQueue()}>
+                        Retry
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+
+              {!isLoadingQueue && !queueError && filteredPatients.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="py-10 text-center text-med-text-muted">
+                    No patients currently match this filter.
+                  </td>
+                </tr>
+              )}
+
               {filteredPatients.map(patient => {
                 const isUrgent = patient.priority === 'urgent';
 

@@ -27,6 +27,7 @@ import { consultationRoutes } from './modules/consultations/consultation.routes.
 import { staffRoutes } from './modules/staff/staff.routes.js';
 import { adminRoutes } from './modules/admin/admin.routes.js';
 import { notificationRoutes } from './modules/notifications/notification.routes.js';
+import { patientPortalRoutes } from './modules/patient-portal/patient-portal.routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -132,6 +133,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await api.register(staffRoutes, { prefix: '/staff' });
     await api.register(adminRoutes, { prefix: '/admin' });
     await api.register(notificationRoutes, { prefix: '/notifications' });
+    await api.register(patientPortalRoutes, { prefix: '/patient-portal' });
   }, { prefix: '/api/v1' });
 
   return app;

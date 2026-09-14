@@ -1,36 +1,20 @@
-export interface AbhaVerificationResult {
-  success: boolean;
-  abhaId: string;
-  abhaAddress: string;
-  name: string;
-  gender: string;
-  age: number;
-  phone: string;
-  isVerified: boolean;
-}
-
-export class MockAbhaProvider {
-  /**
-   * Simulates ABHA 14-digit OTP verification with ABDM gateway.
-   */
-  public static async verifyAbhaOtp(abhaId: string, otp: string): Promise<AbhaVerificationResult> {
-    // Standard test OTP 4829 or any 4-digit code in prototype mode
-    const isValidOtp = otp === '4829' || otp.length === 4;
-    if (!isValidOtp) {
-      throw new Error('Invalid or expired ABHA OTP');
+/**
+ * ABHA (Ayushman Bharat Health Account) identity check.
+ *
+ * There is no live ABDM gateway wired into this deployment (that requires an
+ * NHA-issued HIP/HIU sandbox or production registration, which is an
+ * organizational onboarding process, not an API key). Until real gateway
+ * credentials are configured, this only validates the ABHA number format and
+ * self-attests it — it does NOT verify identity against any government
+ * record, and it never fabricates a patient's name/age/gender.
+ */
+export class SandboxAbhaProvider {
+  public static normalizeAbhaId(abhaId: string): string {
+    const digitsAndDashes = abhaId.replace(/[^0-9-]/g, '');
+    const digitCount = digitsAndDashes.replace(/-/g, '').length;
+    if (digitCount < 14) {
+      throw new Error('Please enter a valid 14-digit ABHA number.');
     }
-
-    const cleanAbha = abhaId.replace(/[^0-9-]/g, '') || '91-4829-1029-4412';
-
-    return {
-      success: true,
-      abhaId: cleanAbha,
-      abhaAddress: `${cleanAbha.replace(/-/g, '')}@abdm`,
-      name: 'Rameshwar Prasad Patel',
-      gender: 'Male',
-      age: 58,
-      phone: '+91 98112 43210',
-      isVerified: true,
-    };
+    return digitsAndDashes;
   }
 }

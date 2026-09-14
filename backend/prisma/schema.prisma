@@ -69,6 +69,7 @@ enum EntityCategory {
   DIAGNOSIS
   MEDICATION
   INVESTIGATION
+  PROCEDURE
   DATE
   DOCTOR
 }
@@ -97,6 +98,7 @@ model User {
   acknowledgedAlerts  TriageAlert[]
   correctedEntities   EntityCorrection[]
   summaryRevisions    SummaryRevision[]
+  patient             Patient?
 
   @@index([email])
   @@index([role])
@@ -169,7 +171,9 @@ model Patient {
   nameHindi           String?
   age                 Int
   gender              String
-  phone               String
+  phone               String?
+  userId              String?       @unique
+  user                User?         @relation(fields: [userId], references: [id])
   abhaId              String?
   abhaAddress         String?
   abhaVerified        Boolean       @default(false)
@@ -181,11 +185,11 @@ model Patient {
   chiefComplaintShort String
   
   // Vitals
-  bp                  String        @default("120/80")
-  heartRate           Int           @default(72)
-  spo2                Int           @default(98)
-  temperature         String        @default("98.6 °F")
-  bmi                 Float         @default(22.5)
+  bp                  String?
+  heartRate           Int?
+  spo2                Int?
+  temperature         String?
+  bmi                 Float?
   bloodSugar          Int?
 
   departmentId        String

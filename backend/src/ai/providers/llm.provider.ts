@@ -33,14 +33,40 @@ export interface ClinicalSummaryOutput {
   redFlagAlerts: string[];
   differentialDiagnoses: DifferentialDiagnosis[];
   recommendedInvestigations: string[];
+  drugInteractions?: Array<{
+    drug1: string;
+    drug2: string;
+    severity: string;
+    mechanism: string;
+    clinicalEffect: string;
+    recommendation: string;
+  }>;
+  abnormalLabFindings?: Array<{
+    testName: string;
+    value: string;
+    referenceRange: string;
+    status: 'HIGH' | 'LOW' | 'CRITICAL';
+  }>;
+  procedureHistory?: string[];
+  hindiSummary?: {
+    conciseSummary: string;
+    keyPositiveFindings: string[];
+    pertinentNegatives: string[];
+    differentialDiagnoses: string[];
+  };
 }
 
 export interface ExtractedEntityOutput {
-  category: 'diagnosis' | 'medication' | 'investigation' | 'date' | 'doctor';
+  category: 'diagnosis' | 'medication' | 'investigation' | 'date' | 'doctor' | 'procedure';
   value: string;
   standardizedName?: string;
   dosage?: string;
   frequency?: string;
+  numericalValue?: number;
+  unit?: string;
+  referenceRange?: string;
+  isAbnormal?: boolean;
+  abnormalDirection?: 'HIGH' | 'LOW' | 'CRITICAL';
   confidence: number;
   isVerified: boolean;
   boundingBox?: { x: number; y: number; w: number; h: number };

@@ -29,3 +29,11 @@ export const walkinSchema = z.object({
   mobile: z.string().optional(),
   sessionId: z.string().optional(),
 });
+
+export const bootstrapAdminSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  phone: z.string().optional(),
+});

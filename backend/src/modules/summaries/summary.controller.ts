@@ -1,10 +1,11 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { summaryService } from './summary.service.js';
 import { sendSuccess } from '../../shared/utils/response.js';
+import { assertPatientAccess, resolvePatientIdForWrite } from '../../shared/utils/authorize.js';
 import { z } from 'zod';
 
 const generateSummarySchema = z.object({
-  patientId: z.string(),
+  patientId: z.string().optional(),
   interviewId: z.string().optional(),
   isAyush: z.boolean().optional(),
 });
@@ -18,12 +19,14 @@ const verifySummarySchema = z.object({
 export class SummaryController {
   async generate(request: FastifyRequest, reply: FastifyReply) {
     const data = generateSummarySchema.parse(request.body);
-    const result = await summaryService.generateSummary(data.patientId, data.interviewId, data.isAyush);
+    const patientId = resolvePatientIdForWrite(request, data.patientId);
+    const result = await summaryService.generateSummary(patientId, data.interviewId, data.isAyush);
     return sendSuccess(reply, result, 201, request.id);
   }
 
   async getPatientSummary(request: FastifyRequest, reply: FastifyReply) {
     const { patientId } = request.params as { patientId: string };
+    assertPatientAccess(request, patientId);
     const result = await summaryService.getPatientSummary(patientId);
     return sendSuccess(reply, result, 200, request.id);
   }

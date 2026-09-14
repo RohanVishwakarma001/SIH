@@ -10,13 +10,15 @@ import {
   ArrowLeft,
   Sun,
   Eye,
-  Type
+  Type,
+  Hand
 } from 'lucide-react';
 import { useKiosk } from '../../context/KioskContext';
 import { useAccessibility } from '../../context/AccessibilityContext';
 import { SUPPORTED_LANGUAGES } from '../../data/mockData';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
+import { SignLanguageAvatar } from '../../components/ui/SignLanguageAvatar';
 
 export const PatientLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -28,7 +30,9 @@ export const PatientLayout: React.FC = () => {
     isLargeText, 
     toggleLargeText, 
     isHighContrast, 
-    toggleHighContrast 
+    toggleHighContrast,
+    isSignAvatarOpen,
+    toggleSignAvatar
   } = useAccessibility();
 
   const [isHelpOpen, setIsHelpOpen] = React.useState(false);
@@ -73,11 +77,14 @@ export const PatientLayout: React.FC = () => {
                   Medi<span className="text-med-green">Kiosk</span>
                 </span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-med-green/10 text-med-green border border-med-green/20">
-                  OPD Triage AI
+                  Case-Taking AI
+                </span>
+                <span className="hidden xl:inline-flex px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                  AIIA • Ministry of Ayush
                 </span>
               </div>
-              <p className="text-xs text-med-text-muted">
-                AI Clinical History Terminal • Gate 2 OPD
+              <p className="text-xs text-med-text-muted truncate max-w-xs sm:max-w-md">
+                All India Institute of Ayurveda • High-Volume OPD Intake
               </p>
             </div>
           </div>
@@ -139,6 +146,20 @@ export const PatientLayout: React.FC = () => {
             <Eye className="w-5 h-5" />
           </button>
 
+          {/* Sign Language Avatar (Stretch Goal) */}
+          <button
+            onClick={toggleSignAvatar}
+            className={`p-2.5 rounded-xl border transition-all flex items-center gap-1.5 ${
+              isSignAvatarOpen
+                ? 'bg-med-green/20 text-med-green border-med-green shadow-glow-green-sm'
+                : 'bg-surface-elevated text-med-text-muted border-border hover:text-med-green'
+            }`}
+            title="Indian Sign Language (ISL) Avatar / सांकेतिक भाषा"
+          >
+            <Hand className="w-5 h-5" />
+            <span className="text-xs font-bold hidden lg:inline">ISL Avatar</span>
+          </button>
+
           {/* Urgent Staff Assistance Button */}
           <button
             onClick={() => setIsHelpOpen(true)}
@@ -154,6 +175,9 @@ export const PatientLayout: React.FC = () => {
       <main className="flex-1 flex flex-col justify-center max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8">
         <Outlet />
       </main>
+
+      {/* Indian Sign Language (ISL) Floating Avatar */}
+      <SignLanguageAvatar />
 
       {/* Language Modal */}
       <Modal

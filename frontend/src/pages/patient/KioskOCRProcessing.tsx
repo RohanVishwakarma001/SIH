@@ -1,13 +1,14 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Sparkles, 
-  ScanLine, 
-  CheckCircle2, 
-  Loader2, 
-  FileText, 
-  Clock, 
-  ArrowRight 
+import {
+  Sparkles,
+  ScanLine,
+  CheckCircle2,
+  Loader2,
+  FileText,
+  Clock,
+  ArrowRight,
+  AlertTriangle
 } from 'lucide-react';
 import { useKiosk } from '../../context/KioskContext';
 import { Card } from '../../components/ui/Card';
@@ -16,9 +17,24 @@ import { Button } from '../../components/ui/Button';
 
 export const KioskOCRProcessing: React.FC = () => {
   const navigate = useNavigate();
-  const { ocrProgress, isOcrProcessing, activeOcrDoc } = useKiosk();
+  const { ocrProgress, isOcrProcessing, activeOcrDoc, ocrError } = useKiosk();
 
   // No auto-navigation timer: the patient explicitly reviews progress and clicks to proceed
+
+  if (ocrError) {
+    return (
+      <div className="flex flex-col items-center justify-center max-w-xl mx-auto py-8 space-y-6 animate-in fade-in duration-300">
+        <Card className="w-full p-8 bg-surface-elevated border-red-500/40 text-center space-y-4">
+          <AlertTriangle className="w-10 h-10 mx-auto text-red-400" />
+          <h2 className="text-xl font-black text-med-text-primary">Document Upload Failed</h2>
+          <p className="text-sm text-med-text-secondary">{ocrError}</p>
+          <Button variant="primary" size="lg" onClick={() => navigate('/patient/documents')} className="font-bold">
+            Try Again
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center max-w-xl mx-auto py-8 space-y-6 animate-in fade-in duration-300">

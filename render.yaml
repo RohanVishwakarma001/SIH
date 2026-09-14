@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: medikiosk-backend
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npx prisma migrate deploy && npm run start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      # Point this at your own managed Postgres (Neon, Supabase, or Render Postgres
+      # on a paid plan — Render's free Postgres tier is deleted after 30 days,
+      # which is not appropriate for production data).
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: BOOTSTRAP_ADMIN_KEY
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false
+      - key: AI_PROVIDER
+        value: openrouter
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: STORAGE_DRIVER
+        value: cloudinary
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: LOG_LEVEL
+        value: info

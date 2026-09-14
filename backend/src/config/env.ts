@@ -1,7 +1,13 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
 
+// Unit/integration tests always run against the mock AI provider (fast,
+// deterministic, no network calls or API cost) regardless of what's
+// configured for local dev/production — .env.test overrides .env.
 dotenv.config();
+if (process.env.NODE_ENV === 'test') {
+  dotenv.config({ path: '.env.test', override: true });
+}
 
 const DEV_JWT_SECRET = 'medikiosk_jwt_secret_development_key_super_secure_2026';
 const DEV_JWT_REFRESH_SECRET = 'medikiosk_jwt_refresh_secret_key_super_secure_2026';
@@ -15,6 +21,9 @@ const envSchema = z
     DATABASE_URL: z.string().default(DEV_DATABASE_URL),
     JWT_SECRET: z.string().default(DEV_JWT_SECRET),
     JWT_REFRESH_SECRET: z.string().default(DEV_JWT_REFRESH_SECRET),
+    // Gates the one-time POST /auth/bootstrap-admin endpoint used to create the
+    // first real admin account after deploying. Rotate/remove after first use.
+    BOOTSTRAP_ADMIN_KEY: z.string().optional().default(''),
     FRONTEND_URL: z.string().default('http://localhost:5173'),
     // Comma-separated list of additional allowed CORS origins in production
     // (FRONTEND_URL is always allowed). Ignored in development, where all origins are allowed.
@@ -47,6 +56,9 @@ const envSchema = z
     }
     if (config.DATABASE_URL === DEV_DATABASE_URL) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['DATABASE_URL'], message: 'DATABASE_URL must be set to a real production database connection string.' });
+    }
+    if (!config.BOOTSTRAP_ADMIN_KEY) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['BOOTSTRAP_ADMIN_KEY'], message: 'BOOTSTRAP_ADMIN_KEY must be set to a high-entropy secret so you can create your first real admin account after deploying.' });
     }
     if (config.AI_PROVIDER !== 'mock') {
       const key = config.AI_PROVIDER === 'openai' ? config.OPENAI_API_KEY : config.OPENROUTER_API_KEY;

@@ -76,15 +76,63 @@ export interface DashavidhaPariksha {
   aharaShakti: { abhyavaharana: string; jarana: string };
   vyayamaShakti: string;
   vaya: string;
+  agni?: string; // Manda, Tikshna, Vishama, Sama
+  koshtha?: string; // Krura, Mridu, Madhyama
+  ashtavidhaPariksha?: {
+    nadi?: string;
+    mutra?: string;
+    mala?: string;
+    jihwa?: string;
+    shabda?: string;
+    sparsha?: string;
+    druk?: string;
+    akruti?: string;
+  };
+  trividhaPariksha?: {
+    darshana?: string;
+    sparshana?: string;
+    prashna?: string;
+  };
+  aharaVihara?: {
+    dietRegimen?: string;
+    lifestyleHabits?: string;
+    viruddhaAhara?: string;
+  };
+  nidanaSamprapti?: {
+    causativeFactors?: string;
+    pathogenesisChain?: string;
+  };
+}
+
+export interface DrugInteractionAlert {
+  drug1: string;
+  drug2: string;
+  severity: 'CRITICAL' | 'MAJOR' | 'MODERATE';
+  mechanism: string;
+  clinicalEffect: string;
+  recommendation: string;
+  interactionType?: 'drug-drug' | 'herb-drug';
+}
+
+export interface AbnormalLabFinding {
+  testName: string;
+  value: string;
+  referenceRange: string;
+  status: 'HIGH' | 'LOW' | 'CRITICAL';
 }
 
 export interface ExtractedMedicalEntity {
   id: string;
-  category: 'diagnosis' | 'medication' | 'investigation' | 'date' | 'doctor';
+  category: 'diagnosis' | 'medication' | 'investigation' | 'date' | 'doctor' | 'procedure';
   value: string;
   standardizedName?: string;
   dosage?: string;
   frequency?: string;
+  numericalValue?: number;
+  unit?: string;
+  referenceRange?: string;
+  isAbnormal?: boolean;
+  abnormalDirection?: 'HIGH' | 'LOW' | 'CRITICAL';
   confidence: number;
   boundingBox?: { x: number; y: number; w: number; h: number };
   isVerified: boolean;
@@ -95,6 +143,7 @@ export interface MedicalDocument {
   title: string;
   type: 'prescription' | 'lab_report' | 'discharge_summary' | 'imaging';
   fileUrl: string;
+  thumbnail?: string;
   date: string;
   facility: string;
   doctorName?: string;
@@ -102,6 +151,9 @@ export interface MedicalDocument {
   confidenceScore: number;
   entities: ExtractedMedicalEntity[];
   rawOcrText: string;
+  drugInteractions?: DrugInteractionAlert[];
+  abnormalLabFindings?: AbnormalLabFinding[];
+  procedureHistory?: string[];
 }
 
 export interface TimelineEvent {
@@ -194,12 +246,51 @@ export interface AiClinicalSummary {
     clinicalRationale: string;
   }[];
   recommendedInvestigations: string[];
+  drugInteractions?: DrugInteractionAlert[];
+  abnormalLabFindings?: AbnormalLabFinding[];
+  procedureHistory?: string[];
+  hindiSummary?: {
+    conciseSummary: string;
+    keyPositiveFindings: string[];
+    pertinentNegatives: string[];
+    differentialDiagnoses: string[];
+  };
   doctorVerification: {
     status: 'pending' | 'accepted' | 'edited' | 'rejected';
     modifiedText?: string;
     physicianRemarks?: string;
     verifiedAt?: string;
     verifiedByDoctorId?: string;
+  };
+}
+
+export interface PatientPortalProfile {
+  id: string;
+  token: string;
+  name: string;
+  nameHindi?: string;
+  age: number;
+  gender: string;
+  phone: string;
+  abhaId?: string;
+  abhaAddress?: string;
+  abhaVerified?: boolean;
+  priority?: string;
+  queueStatus?: string;
+  vitals: VitalSigns;
+  department?: { id: string; name: string; code: string };
+  activeConsent?: {
+    consentAi: boolean;
+    consentDoctorShare: boolean;
+    consentAbha: boolean;
+    status: string;
+  };
+  clinicalData?: {
+    pastMedicalHistory: Array<{ condition: string; diagnosedYear: string }>;
+    pastSurgicalHistory: Array<{ procedure: string; year: string; hospital: string }>;
+    drugAllergies: Array<{ allergen: string; reaction: string; severity: string }>;
+    dailyMedications: Array<{ drugName: string; dosage: string; frequency: string; adherence: string }>;
+    ayushConstitution?: any;
   };
 }
 

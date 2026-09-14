@@ -36,15 +36,26 @@ export const DoctorConsultation: React.FC = () => {
     resetConsultation
   } = useDoctor();
 
-  const history = selectedPatient.structuredHistory;
-  const ai = selectedPatient.aiSummary;
-
   // New medication draft input
   const [newMedName, setNewMedName] = useState('');
   const [newMedDose, setNewMedDose] = useState('');
   const [newMedFreq, setNewMedFreq] = useState('OD');
   const [newMedDuration, setNewMedDuration] = useState('14 days');
   const [newMedInstructions, setNewMedInstructions] = useState('After food');
+
+  if (!selectedPatient) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-med-text-secondary text-sm">
+        <p>No patient selected for consultation.</p>
+        <Button variant="primary" size="sm" onClick={() => navigate('/doctor/dashboard')}>
+          Return to OPD Queue
+        </Button>
+      </div>
+    );
+  }
+
+  const history = selectedPatient.structuredHistory;
+  const ai = selectedPatient.aiSummary;
 
   const handleAddMed = (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,10 +171,10 @@ export const DoctorConsultation: React.FC = () => {
               <div className="pt-2 border-t border-border">
                 <span className="text-[10px] uppercase font-bold text-med-text-muted block">Vitals at Kiosk</span>
                 <div className="grid grid-cols-2 gap-1.5 pt-1 font-mono text-[11px]">
-                  <div className="p-1.5 rounded bg-surface-elevated">BP: {selectedPatient.vitals.bp}</div>
-                  <div className="p-1.5 rounded bg-surface-elevated">HR: {selectedPatient.vitals.heartRate} bpm</div>
-                  <div className="p-1.5 rounded bg-surface-elevated">SpO2: {selectedPatient.vitals.spo2}%</div>
-                  <div className="p-1.5 rounded bg-surface-elevated">BMI: {selectedPatient.vitals.bmi}</div>
+                  <div className="p-1.5 rounded bg-surface-elevated">BP: {selectedPatient.vitals.bp || 'Not recorded'}</div>
+                  <div className="p-1.5 rounded bg-surface-elevated">HR: {selectedPatient.vitals.heartRate ? `${selectedPatient.vitals.heartRate} bpm` : 'Not recorded'}</div>
+                  <div className="p-1.5 rounded bg-surface-elevated">SpO2: {selectedPatient.vitals.spo2 ? `${selectedPatient.vitals.spo2}%` : 'Not recorded'}</div>
+                  <div className="p-1.5 rounded bg-surface-elevated">BMI: {selectedPatient.vitals.bmi || 'Not recorded'}</div>
                 </div>
               </div>
 
@@ -201,6 +212,21 @@ export const DoctorConsultation: React.FC = () => {
             <p className="text-xs text-med-text-primary leading-relaxed bg-surface-elevated p-3 rounded-lg border border-border">
               {ai.conciseSummary}
             </p>
+
+            {/* Drug / Herb Interactions Warning in Consultation (Module B Safety) */}
+            {((ai.drugInteractions && ai.drugInteractions.length > 0) || (selectedPatient.documents.some(d => d.drugInteractions && d.drugInteractions.length > 0))) && (
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/40 text-xs space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-amber-300">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Interaction Safety Alert:</span>
+                </div>
+                {(ai.drugInteractions || selectedPatient.documents.flatMap(d => d.drugInteractions || [])).map((inter, i) => (
+                  <div key={i} className="text-[11px] text-med-text-secondary leading-snug">
+                    • <strong className="text-med-text-primary">{inter.drug1} + {inter.drug2}</strong>: {inter.clinicalEffect}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="space-y-1.5 text-xs">
               <span className="text-[10px] uppercase font-bold text-med-green block">AI Differential Diagnoses</span>

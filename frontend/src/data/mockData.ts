@@ -1,10 +1,7 @@
-import { 
-  Patient, 
-  LanguageOption, 
-  Department, 
-  ClinicalQuestion, 
-  AdminAuditLog, 
-  MedicalDocument 
+import {
+  LanguageOption,
+  Department,
+  ClinicalQuestion
 } from '../types';
 
 export const SUPPORTED_LANGUAGES: LanguageOption[] = [
@@ -272,26 +269,99 @@ export const CLINICAL_QUESTIONS: ClinicalQuestion[] = [
   }
 ];
 
-// AYUSH Specific Questions (Dashavidha Pariksha)
+// SOCRATES Probing Framework for Chest Pain and Acute Symptoms
+export const SOCRATES_QUESTIONS: ClinicalQuestion[] = [
+  {
+    id: 'socrates_character',
+    step: 1,
+    totalSteps: 3,
+    category: 'duration_severity',
+    question: 'SOCRATES: What is the exact character or feeling of the discomfort?',
+    nativeQuestion: {
+      en: 'SOCRATES: What is the exact character or feeling of the discomfort?',
+      hi: 'दर्द या तकलीफ का स्वरूप कैसा महसूस हो रहा है?',
+      mr: 'वेदनेचे नेमके स्वरूप कसे जाणवत आहे?',
+      ta: 'அசௌகரியத்தின் சரியான தன்மை என்ன?',
+      te: 'బాధ లేదా అసౌకర్యం యొక్క ఖచ్చితమైన స్వభావం ఏమిటి?',
+      bn: 'অস্বস্তির সঠিক অনুভূতি বা লক্ষণ কেমন?'
+    },
+    subtext: 'Describes the nature of pain (crushing, burning, stabbing, or aching)',
+    inputType: 'single_choice',
+    options: [
+      { id: 'char_crushing', label: 'Crushing Heavy Pressure (छाती पर भारी वजन या जकड़न)', sublabel: 'Feels like an elephant sitting on chest', isRedFlag: true },
+      { id: 'char_burning', label: 'Burning / Hot Acidity (जलन अथवा एसिडिटी जैसा दर्द)', sublabel: 'Substernal fire sensation, worse when lying flat' },
+      { id: 'char_sharp', label: 'Sharp Stabbing / Needle-like (तेज चुभन जैसा दर्द)', sublabel: 'Pinpoint sharp pain with deep breaths' },
+      { id: 'char_dull', label: 'Dull Continuous Ache (हल्का लगातार मीठा दर्द)', sublabel: 'Non-radiating constant muscular ache' }
+    ]
+  },
+  {
+    id: 'socrates_radiation',
+    step: 2,
+    totalSteps: 3,
+    category: 'duration_severity',
+    question: 'SOCRATES: Does the pain radiate or travel anywhere outside the chest?',
+    nativeQuestion: {
+      en: 'SOCRATES: Does the pain radiate or travel anywhere outside the chest?',
+      hi: 'क्या दर्द सीने से होकर शरीर के किसी अन्य भाग में फैल रहा है?',
+      mr: 'वेदना छातीतून इतर कोणत्याही भागात पसरत आहेत का?',
+      ta: 'மார்பைத் தவிர வேறு எங்கும் வலி பரவுகிறதா?',
+      te: 'ఛాతీ వెలుపల నొప్పి ఎక్కడైనా వ్యాపిస్తుందా?',
+      bn: 'ব্যথা কি বুকের বাইরে কোথাও ছড়িয়ে পড়ছে?'
+    },
+    subtext: 'Probes classical radiation pathways to detect myocardial ischemia',
+    inputType: 'single_choice',
+    options: [
+      { id: 'rad_arm_jaw', label: 'Radiating to Left Arm, Neck, or Jaw (बाएं हाथ या जबड़े में)', sublabel: 'Classical sign of coronary artery insufficiency', isRedFlag: true },
+      { id: 'rad_back', label: 'Radiating straight to Upper Back / Interscapular (पीठ में)', sublabel: 'Tearing or piercing sensation between shoulder blades' },
+      { id: 'rad_epigastric', label: 'Spreading downwards to Upper Abdomen (पेट के ऊपरी भाग में)', sublabel: 'Epigastric discomfort with fullness' },
+      { id: 'rad_localized', label: 'Strictly localized to one spot, does not travel (सिर्फ एक जगह)', sublabel: 'Does not radiate' }
+    ]
+  },
+  {
+    id: 'socrates_exacerbating_relieving',
+    step: 3,
+    totalSteps: 3,
+    category: 'duration_severity',
+    question: 'SOCRATES: What triggers or relieves the pain (Exacerbating & Relieving Factors)?',
+    nativeQuestion: {
+      en: 'SOCRATES: What triggers or relieves the pain (Exacerbating & Relieving Factors)?',
+      hi: 'दर्द किस स्थिति में बढ़ता है अथवा किससे आराम मिलता है?',
+      mr: 'वेदना कशामुळे वाढतात किंवा कशामुळे कमी होतात?',
+      ta: 'வலியை அதிகரிப்பது அல்லது குறைப்பது எது?',
+      te: 'నొప్పి దేని ద్వారా పెరుగుతుంది లేదా తగ్గుతుంది?',
+      bn: 'কীসের কারণে ব্যথা বাড়ে বা কমে?'
+    },
+    subtext: 'Exertional angina typically worsens with walking and resolves with rest',
+    inputType: 'single_choice',
+    options: [
+      { id: 'rel_worse_exertion', label: 'Worse with walking / stairs; relieved by resting (चलने पर बढ़ता है)', sublabel: 'Strong indicator of effort angina / ischemia', isRedFlag: true },
+      { id: 'rel_worse_breathing', label: 'Worse with deep inspiration / coughing (गहरी सांस लेने पर बढ़ता है)', sublabel: 'Pleuritic or musculoskeletal etiology' },
+      { id: 'rel_worse_food', label: 'Worse after oily/spicy food; relieved by antacids (भोजन के बाद बढ़ता है)', sublabel: 'Gastroesophageal reflux / dyspepsia' },
+      { id: 'rel_constant', label: 'Constant unchanging intensity at all times (लगातार एक जैसा रहता है)', sublabel: 'No change with movement or rest' }
+    ]
+  }
+];
+
+// Complete AYUSH Specific Questions (Dashavidha Pariksha - 10 Dimensions & Ahara-Vihara)
 export const AYUSH_PARIKSHA_QUESTIONS: ClinicalQuestion[] = [
   {
     id: 'ayush_prakriti',
     step: 1,
-    totalSteps: 4,
+    totalSteps: 11,
     category: 'ayush_pariksha',
-    question: 'Dashavidha Pariksha: What is your primary bodily constitution (Prakriti)?',
+    question: 'Dashavidha Pariksha 1 (Prakriti): What is your constitutional dosha predominance?',
     nativeQuestion: {
-      en: 'Dashavidha Pariksha: What is your primary bodily constitution (Prakriti)?',
-      hi: 'दशविध परीक्षा: आपकी शारीरिक प्रकृति (दोष प्रधानता) क्या है?',
-      mr: 'दशविध परीक्षा: तुमची शारीरिक प्रकृती (दोष प्राधान्य) काय आहे?',
-      ta: 'தசவித பரீக்ஷா: உங்கள் முதன்மை உடல் தன்மை (பிரகிருதி) என்ன?',
-      te: 'దశవిధ పరీక్ష: మీ ప్రాథమిక శరీర స్వభావం (ప్రకృతి) ఏమిటి?',
-      bn: 'দশবিধ পরীক্ষা: আপনার শারীরিক প্রকৃতি (দোষ প্রাধান্য) কী?'
+      en: 'Dashavidha Pariksha 1 (Prakriti): What is your constitutional dosha predominance?',
+      hi: 'दशविध परीक्षा 1 (प्रकृति): आपकी शारीरिक प्रकृति (दोष प्रधानता) क्या है?',
+      mr: 'दशविध परीक्षा 1 (प्रकृती): तुमची शारीरिक प्रकृती (दोष प्राधान्य) काय आहे?',
+      ta: 'தசவித பரீக்ஷா 1 (பிரகிருதி): உங்கள் முதன்மை உடல் தன்மை என்ன?',
+      te: 'దశవిధ పరీక్ష 1 (ప్రకృతి): మీ ప్రాథమిక శరీర స్వభావం ఏమిటి?',
+      bn: 'দশবিধ পরীক্ষা 1 (প্রকৃতি): আপনার শারীরিক প্রকৃতি কী?'
     },
-    subtext: 'Ayurvedic assessment of Vata, Pitta, and Kapha constitution',
+    subtext: 'Constitutional baseline assessment of Vata, Pitta, and Kapha',
     inputType: 'single_choice',
     isAyushOnly: true,
-    ayushDimension: 'Prakriti',
+    ayushDimension: 'Prakriti (प्रकृति)',
     options: [
       { id: 'prakriti_vata', label: 'Vata Predominant', sublabel: 'Slender build, quick movements, dry skin, sensitive to cold winds' },
       { id: 'prakriti_pitta', label: 'Pitta Predominant', sublabel: 'Medium build, sharp appetite, heat-intolerant, reddish complexion' },
@@ -300,629 +370,296 @@ export const AYUSH_PARIKSHA_QUESTIONS: ClinicalQuestion[] = [
     ]
   },
   {
-    id: 'ayush_ahara_agni',
+    id: 'ayush_vikriti',
     step: 2,
-    totalSteps: 4,
+    totalSteps: 11,
     category: 'ayush_pariksha',
-    question: 'Ahara Shakti & Agni: How would you describe your digestive fire (Koshta / Agni)?',
+    question: 'Dashavidha Pariksha 2 (Vikriti): Current Dosha Imbalance / वर्तमान दोष असंतुलन (विकृति)',
     nativeQuestion: {
-      en: 'Ahara Shakti & Agni: How would you describe your digestive fire (Koshta / Agni)?',
-      hi: 'आहार शक्ति एवं अग्नि: आपकी पाचन शक्ति एवं जठराग्नि कैसी है?',
-      mr: 'आहार शक्ती आणि अग्नी: तुमची पचनशक्ती आणि जठराग्नी कशी आहे?',
-      ta: 'ஆஹார சக்தி & அக்னி: உங்கள் செரிமான தீயை எவ்வாறு விவரிப்பீர்கள்?',
-      te: 'ఆహార శక్తి మరియు అగ్ని: మీ జీర్ణక్రియ ఎలా ఉంది?',
-      bn: 'আহার শক্তি এবং অগ্নি: আপনার হজম শক্তি কেমন?'
+      en: 'Dashavidha Pariksha 2 (Vikriti): Current Dosha Imbalance and morbidity?',
+      hi: 'दशविध परीक्षा 2 (विकृति): वर्तमान में किस दोष के असंतुलन के लक्षण हैं?',
+      mr: 'दशविध परीक्षा 2 (विकृती): सध्या कोणत्या दोषाचे असंतुलन जाणवत आहे?',
+      ta: 'தசவித பரீக்ஷா 2 (விக்ருதி): தற்போதைய தோஷ சமநிலையின்மை என்ன?',
+      te: 'దశవిధ పరీక్ష 2 (వికృతి): ప్రస్తుత దోష అసమతుల్యత ఏమిటి?',
+      bn: 'দশবিধ পরীক্ষা 2 (বিকৃতি): বর্তমানে কোন দোষের ভারসাম্যহীনতা রয়েছে?'
     },
-    subtext: 'Assessment of Abhyavaharana Shakti (intake) and Jarana Shakti (digestion)',
+    subtext: 'Pathological deviation from patient baseline constitution (Samprapti)',
     inputType: 'single_choice',
     isAyushOnly: true,
-    ayushDimension: 'Ahara Shakti',
+    ayushDimension: 'Vikriti (विकृति)',
     options: [
-      { id: 'agni_mandagni', label: 'Mandagni (Sluggish / Heavy)', sublabel: 'Bloating, slow metabolism, feeling heavy hours after light meals' },
-      { id: 'agni_tikshnagni', label: 'Tikshnagni (Hyperactive / Acidic)', sublabel: 'Sharp hunger, acid regurgitation, burning in chest/throat' },
-      { id: 'agni_vishamagni', label: 'Vishamagni (Irregular / Variable)', sublabel: 'Unpredictable hunger, constipation alternating with loose bowels' },
-      { id: 'agni_samagni', label: 'Samagni (Balanced)', sublabel: 'Optimal digestion, feeling light and energetic after meals' }
+      { id: 'vikriti_vata', label: 'Vata Prakopa (वात प्रकोप)', sublabel: 'Body aches, joint cracking, stiffness, insomnia, anxiety, dry stool' },
+      { id: 'vikriti_pitta', label: 'Pitta Prakopa (पित्त प्रकोप)', sublabel: 'Acid reflux, excessive thirst, burning eyes, skin eruptions, anger' },
+      { id: 'vikriti_kapha', label: 'Kapha Prakopa (कफ प्रकोप)', sublabel: 'Heaviness of limbs, productive cough, excessive sleep, sluggishness' },
+      { id: 'vikriti_sannipata', label: 'Sannipataja (सन्निपातज)', sublabel: 'Mixed vitiation of all three doshas simultaneously' }
+    ]
+  },
+  {
+    id: 'ayush_ahara_agni',
+    step: 3,
+    totalSteps: 11,
+    category: 'ayush_pariksha',
+    question: 'Dashavidha Pariksha 3 & 4 (Ahara Shakti & Agni): Digestive Fire & Capacity / जठराग्नि',
+    nativeQuestion: {
+      en: 'Dashavidha Pariksha 3 & 4 (Ahara Shakti & Agni): How is your digestive capacity?',
+      hi: 'दशविध परीक्षा 3 एवं 4 (आहार शक्ति एवं अग्नि): आपकी पाचन शक्ति एवं जठराग्नि कैसी है?',
+      mr: 'दशविध परीक्षा 3 आणि 4 (आहार शक्ती आणि अग्नी): तुमची पचनशक्ती कशी आहे?',
+      ta: 'தசவித பரீக்ஷா 3 & 4: உங்கள் செரிமான தீ மற்றும் உட்கொள்ளும் திறன் எப்படி?',
+      te: 'దశవిధ పరీక్ష 3 & 4: మీ జీర్ణశక్తి ఎలా ఉంది?',
+      bn: 'দশবিধ পরীক্ষা 3 এবং 4: আপনার হজম ক্ষমতা কেমন?'
+    },
+    subtext: 'Abhyavaharana Shakti (food intake power) and Jarana Shakti (digestive efficiency)',
+    inputType: 'single_choice',
+    isAyushOnly: true,
+    ayushDimension: 'Ahara Shakti & Agni (आहार शक्ति)',
+    options: [
+      { id: 'agni_mandagni', label: 'Mandagni (मंदाग्नि / Sluggish)', sublabel: 'Bloating, slow metabolism, feeling heavy hours after light meals' },
+      { id: 'agni_tikshnagni', label: 'Tikshnagni (तीक्ष्णाग्नि / Hyperactive)', sublabel: 'Sharp hunger, acid regurgitation, burning in chest/throat' },
+      { id: 'agni_vishamagni', label: 'Vishamagni (विषमाग्नि / Irregular)', sublabel: 'Unpredictable hunger, constipation alternating with loose bowels' },
+      { id: 'agni_samagni', label: 'Samagni (समाग्नि / Balanced)', sublabel: 'Optimal digestion, feeling light and energetic after meals' }
     ]
   },
   {
     id: 'ayush_satva',
-    step: 3,
-    totalSteps: 4,
+    step: 4,
+    totalSteps: 11,
     category: 'ayush_pariksha',
-    question: 'Satva Pariksha: How is your mental fortitude and stress tolerance?',
+    question: 'Dashavidha Pariksha 5 (Satva): Mental Fortitude and Stress Tolerance / सत्व परीक्षा',
     nativeQuestion: {
-      en: 'Satva Pariksha: How is your mental fortitude and stress tolerance?',
-      hi: 'सत्व परीक्षा: आपका मानसिक बल एवं तनाव सहने की क्षमता कैसी है?',
-      mr: 'सत्व परीक्षा: तुमचे मानसिक बळ आणि ताण सहन करण्याची क्षमता कशी आहे?',
-      ta: 'சத்வ பரீக்ஷா: உங்கள் மன உறுதி மற்றும் மன அழுத்த தாங்கும் திறன் எப்படி?',
-      te: 'సత్వ పరీక్ష: మీ మానసిక బలం మరియు ఒత్తిడిని తట్టుకునే సామర్థ్యం ఎలా ఉంది?',
-      bn: 'সত্ত্ব পরীক্ষা: আপনার মানসিক শক্তি এবং মানসিক চাপ সহ্য করার ক্ষমতা কেমন?'
+      en: 'Dashavidha Pariksha 5 (Satva): Mental Fortitude and Stress Tolerance?',
+      hi: 'दशविध परीक्षा 5 (सत्व): आपका मानसिक बल एवं तनाव सहने की क्षमता कैसी है?',
+      mr: 'दशविध परीक्षा 5 (सत्व): तुमचे मानसिक बळ आणि ताण सहन करण्याची क्षमता कशी आहे?',
+      ta: 'தசவித பரீக்ஷா 5: உங்கள் மன உறுதி மற்றும் மன அழுத்த தாங்கும் திறன் எப்படி?',
+      te: 'దశవిధ పరీక్ష 5: మీ మానసిక బలం మరియు ఒత్తిడిని తట్టుకునే సామర్థ్యం ఎలా ఉంది?',
+      bn: 'দশবিধ পরীক্ষা 5: আপনার মানসিক শক্তি এবং মানসিক চাপ সহ্য করার ক্ষমতা কেমন?'
     },
     subtext: 'Psychological constitution according to Ayurvedic clinical principles',
     inputType: 'single_choice',
     isAyushOnly: true,
-    ayushDimension: 'Satva',
+    ayushDimension: 'Satva (सत्व)',
     options: [
-      { id: 'satva_pravara', label: 'Pravara Satva (Superior)', sublabel: 'Calm under severe distress, patient, highly resilient' },
-      { id: 'satva_madhyama', label: 'Madhyama Satva (Moderate)', sublabel: 'Copes well with support, occasional anxiety' },
-      { id: 'satva_avara', label: 'Avara Satva (Sensitive)', sublabel: 'Easily agitated, highly anxious, fearful of medical procedures' }
+      { id: 'satva_pravara', label: 'Pravara Satva (प्रवर सत्व / High)', sublabel: 'Calm under severe distress, highly patient and resilient' },
+      { id: 'satva_madhyama', label: 'Madhyama Satva (मध्यम सत्व / Moderate)', sublabel: 'Copes well with support, occasional anxiety' },
+      { id: 'satva_avara', label: 'Avara Satva (अवर सत्व / Low)', sublabel: 'Easily agitated, highly anxious, fearful of medical procedures' }
     ]
   },
   {
     id: 'ayush_vyayama',
-    step: 4,
-    totalSteps: 4,
+    step: 5,
+    totalSteps: 11,
     category: 'ayush_pariksha',
-    question: 'Vyayama Shakti & Bala: What is your physical stamina and physical capacity?',
+    question: 'Dashavidha Pariksha 6 (Vyayama Shakti): Physical Stamina & Bala / व्यायाम शक्ति',
     nativeQuestion: {
-      en: 'Vyayama Shakti & Bala: What is your physical stamina and physical capacity?',
-      hi: 'व्यायाम शक्ति एवं बल: आपकी शारीरिक सहनशक्ति एवं कार्यक्षमता कैसी है?',
-      mr: 'व्यायाम शक्ती आणि बल: तुमची शारीरिक सहनशीलता आणि कार्यक्षमता कशी आहे?',
-      ta: 'வியாயாம சக்தி & பலம்: உங்கள் உடல் சகிப்புத்தன்மை மற்றும் திறன் என்ன?',
-      te: 'వ్యాయామ శక్తి మరియు బలం: మీ శారీరక సామర్థ్యం ఎలా ఉంది?',
-      bn: 'ব্যায়াম শক্তি এবং বল: আপনার শারীরিক ক্ষমতা ও সহনশীলতা কেমন?'
+      en: 'Dashavidha Pariksha 6 (Vyayama Shakti): What is your physical stamina and capacity?',
+      hi: 'दशविध परीक्षा 6 (व्यायाम शक्ति): आपकी शारीरिक सहनशक्ति एवं कार्यक्षमता कैसी है?',
+      mr: 'दशविध परीक्षा 6 (व्यायाम शक्ती): तुमची शारीरिक सहनशीलता आणि कार्यक्षमता कशी आहे?',
+      ta: 'தசவித பரீக்ஷா 6: உங்கள் உடல் சகிப்புத்தன்மை மற்றும் திறன் என்ன?',
+      te: 'దశవిధ పరీక్ష 6: మీ శారీరక సామర్థ్యం ఎలా ఉంది?',
+      bn: 'দশবিধ পরীক্ষা 6: আপনার শারীরিক ক্ষমতা ও সহনশীলতা কেমন?'
     },
-    subtext: 'Assessment of bodily strength and physical endurance',
+    subtext: 'Assessment of bodily strength and physical endurance (Karma Samarthya)',
     inputType: 'single_choice',
     isAyushOnly: true,
-    ayushDimension: 'Vyayama Shakti',
+    ayushDimension: 'Vyayama Shakti (व्यायाम शक्ति)',
     options: [
-      { id: 'vyayama_uttama', label: 'Uttama Bala (High Endurance)', sublabel: 'Can perform heavy physical work without quick fatigue' },
-      { id: 'vyayama_madhyama', label: 'Madhyama Bala (Moderate Endurance)', sublabel: 'Comfortable with brisk walking, mild tiredness' },
-      { id: 'vyayama_heena', label: 'Heena Bala (Low Endurance)', sublabel: 'Tires quickly with minimal exertion, dyspnea on stairs' }
+      { id: 'vyayama_uttama', label: 'Uttama Bala (उत्तम बल / High Endurance)', sublabel: 'Can perform heavy physical work without quick fatigue' },
+      { id: 'vyayama_madhyama', label: 'Madhyama Bala (मध्यम बल / Moderate)', sublabel: 'Comfortable with brisk walking, mild tiredness' },
+      { id: 'vyayama_heena', label: 'Heena Bala (हीन बल / Low Endurance)', sublabel: 'Tires quickly with minimal exertion, dyspnea on stairs' }
+    ]
+  },
+  {
+    id: 'ayush_sara',
+    step: 6,
+    totalSteps: 11,
+    category: 'ayush_pariksha',
+    question: 'Dashavidha Pariksha 7 (Sara): Tissue Excellence & Vitality / धातु सार परीक्षा',
+    nativeQuestion: {
+      en: 'Dashavidha Pariksha 7 (Sara): Tissue Excellence and Vitality?',
+      hi: 'दशविध परीक्षा 7 (सार): आपकी शारीरिक धातुओं की पुष्टि एवं सारता कैसी है?',
+      mr: 'दशविध परीक्षा 7 (सार): तुमच्या शारीरिक धातूंची पुष्टी कशी आहे?',
+      ta: 'தசவித பரீக்ஷா 7 (சாரா): தாதுக்களின் ஆரோக்கியம் எப்படி உள்ளது?',
+      te: 'దశవిధ పరీక్ష 7 (సార): మీ శరీర ధాతువుల బలం ఎలా ఉంది?',
+      bn: 'দশবিধ পরীক্ষা 7 (সার): আপনার শারীরিক ধাতুর পুষ্টি কেমন?'
+    },
+    subtext: 'Excellence of Dhatus (Rasa, Rakta, Mamsa, Meda, Asthi, Majja, Shukra)',
+    inputType: 'single_choice',
+    isAyushOnly: true,
+    ayushDimension: 'Sara (सार)',
+    options: [
+      { id: 'sara_pravara', label: 'Pravara Sara (प्रवर सार / High Tissue Vitality)', sublabel: 'Strong teeth, lustrous hair, firm musculature, high immunity' },
+      { id: 'sara_madhyama', label: 'Madhyama Sara (मध्यम सार / Moderate)', sublabel: 'Average physical constitution and tissue nourishment' },
+      { id: 'sara_avara', label: 'Avara Sara (अवर सार / Low)', sublabel: 'Fragile nails, sparse hair, prone to frequent infections' }
+    ]
+  },
+  {
+    id: 'ayush_samhanana',
+    step: 7,
+    totalSteps: 11,
+    category: 'ayush_pariksha',
+    question: 'Dashavidha Pariksha 8 (Samhanana): Body Compactness & Skeletal Built / संहनन परीक्षा',
+    nativeQuestion: {
+      en: 'Dashavidha Pariksha 8 (Samhanana): Body Compactness and Skeletal Built?',
+      hi: 'दशविध परीक्षा 8 (संहनन): आपके शरीर का गठन एवं संधियों (जोड़ों) की दृढ़ता कैसी है?',
+      mr: 'दशविध परीक्षा 8 (संहनन): तुमच्या शरीराची बांधणी आणि सांध्यांची मजबुती कशी आहे?',
+      ta: 'தசவித பரீக்ஷா 8 (சம்ஹனன): உடலின் கட்டமைப்பு மற்றும் மூட்டுகளின் வலிமை எப்படி?',
+      te: 'దశవిధ పరీక్ష 8 (సంహనన): శరీర నిర్మాణం మరియు కీళ్ల బలం ఎలా ఉంది?',
+      bn: 'দশবিধ পরীক্ষা 8 (সংহনন): শরীরের গঠন এবং গাঁটের দৃঢ়তা কেমন?'
+    },
+    subtext: 'Symmetry and compactness of body parts and bone-joint integrity',
+    inputType: 'single_choice',
+    isAyushOnly: true,
+    ayushDimension: 'Samhanana (संहनन)',
+    options: [
+      { id: 'samhanana_pravara', label: 'Susamhata (सुसंहत / Well-Knit Body)', sublabel: 'Evenly distributed musculature, firm and stable joints' },
+      { id: 'samhanana_madhyama', label: 'Madhyama Samhanana (मध्यम संहनन)', sublabel: 'Normal proportionate body compactness' },
+      { id: 'samhanana_avara', label: 'Heena / Hina Samhanana (हीन संहनन)', sublabel: 'Loose lax joints, delicate and prone to sprains' }
+    ]
+  },
+  {
+    id: 'ayush_pramana',
+    step: 8,
+    totalSteps: 11,
+    category: 'ayush_pariksha',
+    question: 'Dashavidha Pariksha 9 (Pramana): Anthropometric Proportions / प्रमाण परीक्षा',
+    nativeQuestion: {
+      en: 'Dashavidha Pariksha 9 (Pramana): Anthropometric Proportions and Physical Frame?',
+      hi: 'दशविध परीक्षा 9 (प्रमाण): शारीरिक अंग-प्रत्यंगों का अनुपात और बनावट कैसी है?',
+      mr: 'दशविध परीक्षा 9 (प्रमाण): शरीराचे प्रमाण आणि ठेवण कशी आहे?',
+      ta: 'தசவித பரீக்ஷா 9 (பிரமாண): உடல் உறுப்புகளின் விகிதாச்சாரம் எப்படி?',
+      te: 'దశవిధ పరీక్ష 9 (ప్రమాణ): శరీర అవయవాల నిష్పత్తి ఎలా ఉంది?',
+      bn: 'দশবিধ পরীক্ষা 9 (প্রমাণ): শারীরিক অঙ্গ-प्रत्यঙ্গের অনুপাত কেমন?'
+    },
+    subtext: 'Ayurvedic evaluation of ideal body measurements and proportions (Sama Pramana)',
+    inputType: 'single_choice',
+    isAyushOnly: true,
+    ayushDimension: 'Pramana (प्रमाण)',
+    options: [
+      { id: 'pramana_sama', label: 'Sama Pramana (सम प्रमाण / Well-Proportioned)', sublabel: 'Harmonious height-to-arm span, symmetrical facial and limb features' },
+      { id: 'pramana_vishama_atihrasva', label: 'Hrasva / Ati-Krisha (ह्रस्व / कृश)', sublabel: 'Underweight or unusually petite skeletal frame' },
+      { id: 'pramana_vishama_atisthula', label: 'Sthula / Ati-Sthula (स्थूल / अतिस्थूल)', sublabel: 'Excessive adipose accumulation, broad circumference' }
+    ]
+  },
+  {
+    id: 'ayush_satmya_vaya',
+    step: 9,
+    totalSteps: 11,
+    category: 'ayush_pariksha',
+    question: 'Dashavidha Pariksha 10 (Satmya & Vaya): Adaptability, Habits & Age / सात्म्य एवं वय',
+    nativeQuestion: {
+      en: 'Dashavidha Pariksha 10 (Satmya & Vaya): Dietary Adaptability and Age Category?',
+      hi: 'दशविध परीक्षा 10 (सात्म्य एवं वय): भोजन व वातावरण की अनुकूलता एवं आयु वर्ग क्या है?',
+      mr: 'दशविध परीक्षा 10 (सात्म्य आणि वय): अन्नाची अनुकूलता आणि वय काय आहे?',
+      ta: 'தசவித பரீக்ஷா 10 (சாத்மிய & வய): உணவின் பொருந்தும் தன்மை மற்றும் வயது என்ன?',
+      te: 'దశవిధ పరీక్ష 10 (సాత్మ్య మరియు వయ): ఆహార అలవాట్లు మరియు వయస్సు ఏమిటి?',
+      bn: 'দশবিধ পরীক্ষা 10 (সাৎম্য ও বয়): খাদ্যের উপযোগিতা এবং বয়স কী?'
+    },
+    subtext: 'Habituation to tastes and climate (Satmya) and current chronological stage (Vaya)',
+    inputType: 'single_choice',
+    isAyushOnly: true,
+    ayushDimension: 'Satmya & Vaya (सात्म्य एवं वय)',
+    options: [
+      { id: 'satmya_pravara', label: 'Sarva-Rasa Satmya (सर्व-रस सात्म्य / Madhyama Vaya)', sublabel: 'Can digest and adapt to all food types and seasonal changes effortlessly' },
+      { id: 'satmya_madhyama', label: 'Oka Satmya (ओक सात्म्य / Habit Dependent)', sublabel: 'Accustomed only to regional foods; upset by dietary deviations' },
+      { id: 'satmya_avara', label: 'Eka-Rasa Satmya / Vriddha Vaya (वृद्ध वय)', sublabel: 'Elderly stage with sensitive digestion requiring specific light foods' }
+    ]
+  },
+  {
+    id: 'ayush_ahara_vihara_diet',
+    step: 10,
+    totalSteps: 11,
+    category: 'ayush_pariksha',
+    question: 'Ahara Pariksha: Dietary Habits & Food Intake Regimen / आहार परीक्षा (खानपान)',
+    nativeQuestion: {
+      en: 'Ahara Pariksha: What are your regular dietary patterns and habits?',
+      hi: 'आहार परीक्षा: आपकी नियमित खानपान की आदतें और दिनचर्या कैसी है?',
+      mr: 'आहार परीक्षा: तुमच्या नियमित खाण्यापिण्याच्या सवयी कशा आहेत?',
+      ta: 'ஆஹார பரீக்ஷா: உங்கள் வழக்கமான உணவுப் பழக்கவழக்கங்கள் என்ன?',
+      te: 'ఆహార పరీక్ష: మీ సాధారణ ఆహారపు అలవాట్లు ఏమిటి?',
+      bn: 'আহার পরীক্ষা: আপনার খাদ্যাভ্যাস কেমন?'
+    },
+    subtext: 'Probes Viruddha Ahara (incompatible foods), untimely meals, and spicy diet',
+    inputType: 'multi_choice',
+    isAyushOnly: true,
+    ayushDimension: 'Ahara (खानपान)',
+    options: [
+      { id: 'diet_spicy_fried', label: 'Frequent deep-fried, sour, or spicy food (तली-भुनी या तीखी चीजें)', sublabel: 'Causes Pitta Prakopa and acid regurgitation' },
+      { id: 'diet_irregular_timings', label: 'Irregular meal timings / Skipping meals (अनियमित भोजन समय)', sublabel: 'Causes Vishamagni and gastric bloating' },
+      { id: 'diet_viruddha', label: 'Viruddha Ahara (विरुद्ध आहार - Milk with sour fruit/fish)', sublabel: 'Incompatible combinations generating Ama toxins' },
+      { id: 'diet_sattvic_fresh', label: 'Fresh, warm, home-cooked Sattvic diet (ताजा सात्विक भोजन)', sublabel: 'Balanced nutrition supporting Dhatus' }
+    ]
+  },
+  {
+    id: 'ayush_vihara_lifestyle',
+    step: 11,
+    totalSteps: 11,
+    category: 'ayush_pariksha',
+    question: 'Vihara & Nidana: Sleep Routine & Lifestyle Regimen / विहार एवं निदान (जीवनशैली)',
+    nativeQuestion: {
+      en: 'Vihara & Nidana: Sleep Routine, Daily Schedule & Lifestyle Factors?',
+      hi: 'विहार एवं निदान: आपकी नींद, दैनिक दिनचर्या एवं मानसिक तनाव कैसा है?',
+      mr: 'विहार आणि निदान: तुमची झोप, दिनचर्या आणि ताणतणाव कसा आहे?',
+      ta: 'விஹார & நிதான: உங்கள் தூக்கம், தினசரி நடைமுறை மற்றும் வாழ்க்கை முறை என்ன?',
+      te: 'విహార మరియు నిదాన: మీ నిద్ర మరియు జీవనశైలి ఎలా ఉంది?',
+      bn: 'বিহার ও নিদান: আপনার ঘুম এবং জীবনধারা কেমন?'
+    },
+    subtext: 'Probes Ratrijagarana (late nights), Divasvapna (daytime sleep), and mental stress',
+    inputType: 'multi_choice',
+    isAyushOnly: true,
+    ayushDimension: 'Vihara (जीवनशैली)',
+    options: [
+      { id: 'vihara_ratrijagarana', label: 'Ratrijagarana (रात्रि जागरण - Late night waking / screen time)', sublabel: 'Direct cause of aggravated Vata and dry eyes' },
+      { id: 'vihara_divasvapna', label: 'Divasvapna (दिवास्वप्न - Sleeping during daytime after heavy lunch)', sublabel: 'Direct cause of Kapha Prakopa and sluggish digestion' },
+      { id: 'vihara_manasika_stress', label: 'Chinta & Shoka (मानसिक तनाव / Chronic worry and anxiety)', sublabel: 'Affects Prana Vata and impairs digestive Agni' },
+      { id: 'vihara_swastha_dinacharya', label: 'Healthy Dinacharya (संतुलित दिनचर्या एवं पर्याप्त नींद)', sublabel: 'Regular sleep schedule and morning walks' }
+    ]
+  },
+  {
+    id: 'ayush_koshtha',
+    step: 12,
+    totalSteps: 13,
+    category: 'ayush_pariksha',
+    question: 'Koshtha Pariksha: Bowel Evacuation Tendency / कोष्ठ परीक्षा (शौच प्रवृत्ति)',
+    nativeQuestion: {
+      en: 'Koshtha Pariksha: What is your regular bowel habit and evacuation nature?',
+      hi: 'कोष्ठ परीक्षा: आपकी शौच प्रवृत्ति एवं पेट साफ होने की प्रकृति कैसी है?',
+      mr: 'कोष्ठ परीक्षा: तुमची पोट साफ होण्याची प्रवृत्ती कशी आहे?',
+      ta: 'கோஷ்ட பரீக்ஷா: உங்கள் குடல் இயக்கம் மற்றும் மலம் கழிக்கும் தன்மை என்ன?',
+      te: 'కోష్ఠ పరీక్ష: మీ ప్రేగు కదలికలు మరియు విసర్జన స్వభావం ఎలా ఉంది?',
+      bn: 'কোষ্ঠ পরীক্ষা: আপনার পেট পরিষ্কার হওয়ার প্রকৃতি কেমন?'
+    },
+    subtext: 'Assesses Krura (hard/constipated - Vata), Mridu (soft/loose - Pitta), or Madhyama (balanced - Kapha)',
+    inputType: 'single_choice',
+    isAyushOnly: true,
+    ayushDimension: 'Koshtha (कोष्ठ)',
+    options: [
+      { id: 'koshtha_krura', label: 'Krura Koshtha (क्रूर कोष्ठ - Hard stool / Constipation prone)', sublabel: 'Requires strong laxatives or warm milk to evacuate; dry hard pellets (Vata)' },
+      { id: 'koshtha_mridu', label: 'Mridu Koshtha (मृदु कोष्ठ - Quick evacuation / Loose tendency)', sublabel: 'Evacuates easily even with mild warm milk or fruits; prone to loose stools (Pitta)' },
+      { id: 'koshtha_madhyama', label: 'Madhyama Koshtha (मध्यम कोष्ठ - Regular normal bowel motion)', sublabel: 'Once daily formed stool without straining or urgency (Balanced)' }
+    ]
+  },
+  {
+    id: 'ayush_ashtavidha_jihwa_mala',
+    step: 13,
+    totalSteps: 13,
+    category: 'ayush_pariksha',
+    question: 'Ashtavidha Pariksha (Jihwa & Ama): Tongue Appearance & Metabolic Endotoxins / जिह्वा एवं सामता',
+    nativeQuestion: {
+      en: 'Ashtavidha Pariksha: Is your tongue coated with white/yellow layer (Ama)?',
+      hi: 'अष्टविध परीक्षा: क्या आपकी जीभ पर सफेद या पीली परत (आम दोष / टॉक्सिन) जमी रहती है?',
+      mr: 'अष्टविध परीक्षा: तुमच्या जिभेवर पांढरा थर किंवा चिकटपणा जाणवतो का?',
+      ta: 'அஷ்டவித பரீக்ஷா: உங்கள் நாக்கில் வெள்ளை அல்லது மஞ்சள் படலம் உள்ளதா?',
+      te: 'అష్టవిధ పరీక్ష: మీ నాలుకపై తెల్లటి పొర ఉందా?',
+      bn: 'অষ্টবিধ পরীক্ষা: আপনার জিহ্বায় কি সাদা বা হলুদ আস্তরণ থাকে?'
+    },
+    subtext: 'Probes Saama (coated tongue with metabolic Ama toxins) vs Niraama (clean tongue)',
+    inputType: 'single_choice',
+    isAyushOnly: true,
+    ayushDimension: 'Ashtavidha (अष्टविध परीक्षा)',
+    options: [
+      { id: 'jihwa_saama_heavy', label: 'Saama Jihwa (साम जिह्वा - Thick white/yellow coating & morning heaviness)', sublabel: 'Indicates high circulating Ama (endotoxins) and low digestive Agni' },
+      { id: 'jihwa_niraama_clean', label: 'Niraama Jihwa (निराम जिह्वा - Clean pink tongue without coating)', sublabel: 'Indicates clear digestive channels and absence of acute Ama' },
+      { id: 'jihwa_dry_fissured', label: 'Ruksha / Kharata (रुक्ष जिह्वा - Dry, rough with fissures)', sublabel: 'Indicates aggravated Vata and severe dehydration of mucosal tissues' }
     ]
   }
 ];
 
-export const MOCK_DOCUMENTS: MedicalDocument[] = [
-  {
-    id: 'doc_rx_01',
-    title: 'Dr. Ram Manohar Lohia Hospital - OPD Prescription',
-    type: 'prescription',
-    fileUrl: '/mock_rx_patel.png',
-    date: '18 Jan 2026',
-    facility: 'RML Hospital, Cardiology OPD, New Delhi',
-    doctorName: 'Dr. K. S. Venkatesh (MD, DM Cardio)',
-    ocrStatus: 'completed',
-    confidenceScore: 96.8,
-    rawOcrText: 'RML HOSPITAL OPD CARD #88219. Pt: Rameshwar Patel, 58/M. BP: 154/96 mmHg. Rx: Tab. Telmisartan 40mg PO OD. Tab. Atorvastatin 20mg PO HS. Tab. Metformin 500mg BD. Advised: ECG, Lipid Profile. Review in 1 month.',
-    entities: [
-      { id: 'e1', category: 'medication', value: 'Telmisartan 40mg', dosage: '40mg', frequency: 'Once daily (OD)', confidence: 99.1, isVerified: true },
-      { id: 'e2', category: 'medication', value: 'Atorvastatin 20mg', dosage: '20mg', frequency: 'Bedtime (HS)', confidence: 97.5, isVerified: true },
-      { id: 'e3', category: 'medication', value: 'Metformin 500mg', dosage: '500mg', frequency: 'Twice daily (BD)', confidence: 98.4, isVerified: true },
-      { id: 'e4', category: 'diagnosis', value: 'Essential Hypertension', confidence: 94.2, isVerified: true },
-      { id: 'e5', category: 'investigation', value: '12-Lead ECG & Lipid Profile', confidence: 96.0, isVerified: false },
-      { id: 'e6', category: 'date', value: '18-01-2026', confidence: 99.4, isVerified: true }
-    ]
-  },
-  {
-    id: 'doc_lab_02',
-    title: 'Max Healthcare Biochemistry Comprehensive Lab Report',
-    type: 'lab_report',
-    fileUrl: '/mock_lab_sunita.png',
-    date: '04 Feb 2026',
-    facility: 'Max Super Speciality Hospital Labs',
-    doctorName: 'Dr. Nivedita Sen (MD Path)',
-    ocrStatus: 'completed',
-    confidenceScore: 98.2,
-    rawOcrText: 'BIOCHEMISTRY DEPARTMENT. Glycated Hemoglobin (HbA1c): 8.8% [High]. Fasting Plasma Glucose: 164 mg/dL [High]. Serum Creatinine: 0.92 mg/dL [Normal]. eGFR: >90 mL/min.',
-    entities: [
-      { id: 'e7', category: 'investigation', value: 'HbA1c: 8.8%', confidence: 99.5, isVerified: true },
-      { id: 'e8', category: 'investigation', value: 'Fasting Plasma Glucose: 164 mg/dL', confidence: 98.9, isVerified: true },
-      { id: 'e9', category: 'investigation', value: 'Serum Creatinine: 0.92 mg/dL', confidence: 97.2, isVerified: true },
-      { id: 'e10', category: 'diagnosis', value: 'Uncontrolled Type 2 Diabetes Mellitus', confidence: 95.8, isVerified: true }
-    ]
-  }
-];
-
-export const MOCK_PATIENTS: Patient[] = [
-  {
-    id: 'pat_001',
-    token: 'A-104',
-    roomNo: 'Room 04 (Cardiac OPD)',
-    name: 'Rameshwar Prasad Patel',
-    nameHindi: 'रामेश्वर प्रसाद पटेल',
-    age: 58,
-    gender: 'Male',
-    phone: '+91 98112 43210',
-    abhaId: '91-4829-1029-4412',
-    abhaAddress: 'rameshwar.patel@abdm',
-    abhaVerified: true,
-    department: 'cardiology',
-    priority: 'urgent',
-    queueStatus: 'waiting',
-    historyStatus: 'ready-for-review',
-    waitTimeMinutes: 2,
-    checkedInTime: '08:42 AM',
-    chiefComplaintShort: 'Acute crushing retrosternal chest pain radiating to left arm with diaphoresis',
-    vitals: {
-      bp: '162/98',
-      heartRate: 104,
-      spo2: 94,
-      temperature: '98.4 °F',
-      bmi: 27.8,
-      bloodSugar: 178
-    },
-    redFlag: {
-      isTriggered: true,
-      title: 'ACUTE CORONARY SYNDROME SUSPICION',
-      description: 'Patient reports acute substernal crushing pain (Severity 9/10), onset 2 hours ago, radiating to left arm and jaw, accompanied by profuse diaphoresis and tachycardia.',
-      symptoms: [
-        'Crushing retrosternal chest pain radiating to left arm',
-        'Severe diaphoresis (cold sweats)',
-        'Tachycardia (HR 104 bpm)',
-        'Elevated BP (162/98 mmHg)'
-      ],
-      severity: 'critical',
-      timestamp: '08:44:12 AM',
-      staffAlertSent: true
-    },
-    structuredHistory: {
-      chiefComplaint: {
-        primary: 'Retrosternal chest pain radiating to left shoulder and arm',
-        onset: 'Sudden onset 2 hours ago while climbing stairs at railway station',
-        duration: '2 hours persistent',
-        severityScore: 9,
-        location: 'Mid-chest, radiating to left jaw, neck and left arm',
-        aggravatingFactors: ['Exertion', 'Walking'],
-        relievingFactors: ['Rest (partial)']
-      },
-      historyOfPresentIllness: 'A 58-year-old male with a history of hypertension and dyslipidemia presents with sudden, crushing mid-chest heaviness starting 2 hours ago. Pain radiates to the left arm and jaw. Patient felt nauseated and noticed cold profuse sweating. Denies fever, hemoptysis or syncope. Took one tablet of aspirin 75mg at home with no relief.',
-      pastMedicalHistory: [
-        { condition: 'Essential Hypertension', diagnosedYear: '2019', currentStatus: 'Active', notes: 'On Telmisartan 40mg OD' },
-        { condition: 'Dyslipidemia', diagnosedYear: '2021', currentStatus: 'Active', notes: 'On Atorvastatin 20mg HS' }
-      ],
-      pastSurgicalHistory: [
-        { procedure: 'Appendectomy', year: '2008', hospital: 'District Hospital Jabalpur' }
-      ],
-      drugHistory: [
-        { drugName: 'Telmisartan', dosage: '40mg', frequency: 'OD', adherence: 'Regular', duration: '5 years', isVerifiedByOcr: true },
-        { drugName: 'Atorvastatin', dosage: '20mg', frequency: 'HS', adherence: 'Regular', duration: '3 years', isVerifiedByOcr: true }
-      ],
-      allergyHistory: [
-        { allergen: 'Penicillin', reaction: 'Skin rash and facial angioedema', severity: 'Severe (Anaphylaxis Risk)' }
-      ],
-      familyHistory: [
-        { relation: 'Father', condition: 'Myocardial Infarction at age 62 (deceased)' },
-        { relation: 'Mother', condition: 'Type 2 Diabetes Mellitus' }
-      ],
-      personalHistory: {
-        diet: 'Vegetarian',
-        tobaccoUse: 'Quit bidi 6 years ago (15 pack-years prior)',
-        alcoholUse: 'Occasional social use',
-        sleep: '6 hours, restless',
-        physicalActivity: 'Sedentary'
-      },
-      reviewOfSystems: [
-        { system: 'Cardiovascular', status: 'Abnormal', findings: 'Chest pain, palpitation, diaphoresis' },
-        { system: 'Respiratory', status: 'Abnormal', findings: 'Mild exertional dyspnea' },
-        { system: 'Gastrointestinal', status: 'Normal', findings: 'Mild nausea without vomiting' },
-        { system: 'Neurological', status: 'Normal', findings: 'Alert, oriented x 3, no focal deficits' }
-      ],
-      previousInvestigations: [
-        { testName: 'Lipid Profile - Total Cholesterol', result: '242', unit: 'mg/dL', referenceRange: '< 200', date: 'Jan 2026', status: 'High' },
-        { testName: 'Serum Creatinine', result: '1.04', unit: 'mg/dL', referenceRange: '0.7 - 1.2', date: 'Jan 2026', status: 'Normal' }
-      ]
-    },
-    aiSummary: {
-      id: 'sum_001',
-      patientId: 'pat_001',
-      generatedAt: '08:44:30 AM',
-      conciseSummary: '58M known hypertensive presenting with acute substernal crushing chest pain radiating to left arm/jaw, diaphoresis, and HR 104 bpm. Strongly suspicious for Acute Coronary Syndrome (STEMI/NSTEMI). Immediate stat ECG and Troponin-I advised.',
-      keyPositiveFindings: [
-        'Acute retrosternal chest pain (Severity 9/10, 2 hr duration)',
-        'Classic radiation to left arm and jaw',
-        'Profuse cold sweating (diaphoresis)',
-        'Hypertension with elevated intake BP 162/98 mmHg',
-        'Strong paternal history of premature coronary artery disease'
-      ],
-      pertinentNegatives: [
-        'No pleuritic pain or postural relief (rules down pericarditis)',
-        'No focal neurological deficits (rules down acute CVA)',
-        'No lower limb unilateral swelling or calf pain (low DVT risk)'
-      ],
-      redFlagAlerts: [
-        'URGENT: High pre-test probability of Acute Coronary Syndrome',
-        'Staff alerted to expedite immediate 12-lead ECG & emergency cardiac bed'
-      ],
-      differentialDiagnoses: [
-        { name: 'Acute Myocardial Infarction (STEMI / NSTEMI)', icdCode: 'I21.9', confidence: 92, clinicalRationale: 'Typical crushing radiation, diaphoresis, age, HTN, smoking history' },
-        { name: 'Unstable Angina', icdCode: 'I20.0', confidence: 78, clinicalRationale: 'New onset crescendo angina at low physical exertion' },
-        { name: 'Aortic Dissection (rule out)', icdCode: 'I71.0', confidence: 25, clinicalRationale: 'Severe pain in hypertensive patient; check bilateral pulses' }
-      ],
-      recommendedInvestigations: [
-        'Stat 12-Lead ECG (Within 10 mins)',
-        'High-Sensitivity Cardiac Troponin-I (hs-cTnI)',
-        'Point-of-Care Echocardiogram for Regional Wall Motion Abnormality (RWMA)',
-        'Serum Electrolytes and CK-MB'
-      ],
-      doctorVerification: {
-        status: 'pending'
-      }
-    },
-    documents: [MOCK_DOCUMENTS[0]],
-    timeline: [
-      { id: 't1', date: 'Today, 08:42 AM', yearMonth: 'Sep 2026', title: 'MediKiosk Intake & Triage', category: 'diagnosis', facility: 'City Hospital OPD', summary: 'Patient completed AI kiosk intake. Red flag triggered for acute chest pain.', badgeText: 'Urgent Red Flag', isImportant: true },
-      { id: 't2', date: '18 Jan 2026', yearMonth: 'Jan 2026', title: 'Cardiology Review & Prescription Refill', category: 'prescription', facility: 'RML Hospital New Delhi', summary: 'BP 154/96. Telmisartan 40mg and Atorvastatin 20mg renewed.', badgeText: 'Prescription OCR', isImportant: false, documentId: 'doc_rx_01' },
-      { id: 't3', date: '14 Nov 2024', yearMonth: 'Nov 2024', title: 'Hypertension Diagnostic Workup', category: 'diagnosis', facility: 'District Hospital', summary: 'Primary diagnosis of Essential HTN established. Started on pharmacotherapy.', badgeText: 'Diagnosis' },
-      { id: 't4', date: '12 Sep 2008', yearMonth: 'Sep 2008', title: 'Open Appendectomy', category: 'surgery', facility: 'District Hospital Jabalpur', summary: 'Uncomplicated appendectomy for acute phlegmonous appendicitis.', badgeText: 'Surgical History' }
-    ]
-  },
-  {
-    id: 'pat_002',
-    token: 'B-208',
-    roomNo: 'Room 08 (Internal Medicine)',
-    name: 'Sunita Devi Sharma',
-    nameHindi: 'सुनीता देवी शर्मा',
-    age: 52,
-    gender: 'Female',
-    phone: '+91 97234 11982',
-    abhaId: '82-1923-8821-3390',
-    abhaAddress: 'sunita.sharma@abdm',
-    abhaVerified: true,
-    department: 'general',
-    priority: 'attention',
-    queueStatus: 'ready',
-    historyStatus: 'ready-for-review',
-    waitTimeMinutes: 9,
-    checkedInTime: '08:35 AM',
-    chiefComplaintShort: 'Uncontrolled glycemic follow-up, bilateral distal tingling in feet, fatigue',
-    vitals: {
-      bp: '138/86',
-      heartRate: 78,
-      spo2: 98,
-      temperature: '98.6 °F',
-      bmi: 29.4,
-      bloodSugar: 214
-    },
-    structuredHistory: {
-      chiefComplaint: {
-        primary: 'Burning sensation and tingling numbness in both feet, generalized fatigue',
-        onset: 'Gradual onset over past 3 months',
-        duration: '3 months',
-        severityScore: 5,
-        location: 'Bilateral soles and toes (glove-and-stocking distribution)',
-        aggravatingFactors: ['Night time', 'Prolonged walking'],
-        relievingFactors: ['Rest', 'Foot massage']
-      },
-      historyOfPresentIllness: 'A 52-year-old female with known Type 2 Diabetes for 7 years presents for quarterly review. Complains of persistent burning sensation and pins-and-needles numbness in both feet worse at bedtime. Also reports polydipsia and nocturia (2-3 times/night). Recent lab report shows HbA1c of 8.8%.',
-      pastMedicalHistory: [
-        { condition: 'Type 2 Diabetes Mellitus', diagnosedYear: '2019', currentStatus: 'Active', notes: 'Suboptimally controlled' },
-        { condition: 'Hypothyroidism', diagnosedYear: '2021', currentStatus: 'Controlled', notes: 'On Levothyroxine 50mcg' }
-      ],
-      pastSurgicalHistory: [
-        { procedure: 'Caesarean section x 2', year: '1998, 2002', hospital: 'District Women Hospital' }
-      ],
-      drugHistory: [
-        { drugName: 'Metformin', dosage: '500mg', frequency: 'BD', adherence: 'Irregular', duration: '4 years', isVerifiedByOcr: true },
-        { drugName: 'Glimepiride', dosage: '1mg', frequency: 'OD', adherence: 'Regular', duration: '2 years' },
-        { drugName: 'Levothyroxine', dosage: '50mcg', frequency: 'OD (Empty stomach)', adherence: 'Regular', duration: '5 years' }
-      ],
-      allergyHistory: [],
-      familyHistory: [
-        { relation: 'Mother', condition: 'Type 2 Diabetes Mellitus with Diabetic Retinopathy' }
-      ],
-      personalHistory: {
-        diet: 'Vegetarian',
-        tobaccoUse: 'Nil',
-        alcoholUse: 'Nil',
-        sleep: '5 hours, disturbed by nocturia and foot burning',
-        physicalActivity: 'Minimal brisk walking'
-      },
-      reviewOfSystems: [
-        { system: 'Endocrine', status: 'Abnormal', findings: 'Polydipsia, nocturia, polyuria' },
-        { system: 'Neurological', status: 'Abnormal', findings: 'Distal symmetrical sensory paresthesias' },
-        { system: 'Cardiovascular', status: 'Normal', findings: 'No chest pain, no palpitations' }
-      ],
-      previousInvestigations: [
-        { testName: 'HbA1c', result: '8.8', unit: '%', referenceRange: '< 7.0 (Target)', date: 'Feb 2026', status: 'High' },
-        { testName: 'Fasting Blood Sugar', result: '164', unit: 'mg/dL', referenceRange: '70 - 100', date: 'Feb 2026', status: 'High' },
-        { testName: 'Serum Creatinine', result: '0.92', unit: 'mg/dL', referenceRange: '0.6 - 1.1', date: 'Feb 2026', status: 'Normal' }
-      ]
-    },
-    aiSummary: {
-      id: 'sum_002',
-      patientId: 'pat_002',
-      generatedAt: '08:38:15 AM',
-      conciseSummary: '52F with 7-year T2DM presenting with poorly controlled HbA1c (8.8%) and clinical symptoms suggestive of early Diabetic Peripheral Neuropathy (distal symmetrical burning paresthesia). Medication adherence optimization and escalation needed.',
-      keyPositiveFindings: [
-        'HbA1c 8.8% & Point-of-care capillary blood glucose 214 mg/dL',
-        'Bilateral stocking distribution foot numbness & burning paresthesia',
-        'Nocturia and osmotic symptoms',
-        'Irregular adherence to Metformin'
-      ],
-      pertinentNegatives: [
-        'No active diabetic foot ulcers or skin breakdown',
-        'Normal renal parameters (eGFR > 90 mL/min, Creatinine 0.92)',
-        'No history of hypoglycemic episodes'
-      ],
-      redFlagAlerts: [],
-      differentialDiagnoses: [
-        { name: 'Diabetic Peripheral Neuropathy (DPN)', icdCode: 'E11.42', confidence: 91, clinicalRationale: 'Classic distal symmetrical sensory symptoms in uncontrolled T2DM' },
-        { name: 'Uncontrolled Type 2 Diabetes without acute complication', icdCode: 'E11.65', confidence: 95, clinicalRationale: 'HbA1c > 8.5% on dual oral therapy with poor adherence' },
-        { name: 'Vitamin B12 Deficiency Neuropathy (Metformin-induced)', icdCode: 'E53.8', confidence: 45, clinicalRationale: 'Long-term Metformin use can lower B12 levels' }
-      ],
-      recommendedInvestigations: [
-        'Urine Microalbumin/Creatinine Ratio (UACR)',
-        'Serum Vitamin B12 and Folate levels',
-        'Dilated Fundus Examination (Annual Diabetic Retinopathy screening)',
-        '10g Semmes-Weinstein Monofilament examination'
-      ],
-      doctorVerification: {
-        status: 'pending'
-      }
-    },
-    documents: [MOCK_DOCUMENTS[1]],
-    timeline: [
-      { id: 't20', date: 'Today, 08:35 AM', yearMonth: 'Sep 2026', title: 'MediKiosk Intake Completed', category: 'diagnosis', facility: 'City Hospital OPD', summary: 'Pre-consultation history recorded. Lab report scanned.', badgeText: 'Intake Complete' },
-      { id: 't21', date: '04 Feb 2026', yearMonth: 'Feb 2026', title: 'Biochemistry Panel (HbA1c 8.8%)', category: 'lab_result', facility: 'Max Super Speciality Hospital', summary: 'Uncontrolled glycemic markers. Normal creatinine.', badgeText: 'Lab Report OCR', documentId: 'doc_lab_02' },
-      { id: 't22', date: '19 Aug 2025', yearMonth: 'Aug 2025', title: 'Endocrinology OPD Review', category: 'consultation', facility: 'City Hospital', summary: 'Glimepiride 1mg added to Metformin 500mg BD.', badgeText: 'Prescription' }
-    ]
-  },
-  {
-    id: 'pat_003',
-    token: 'C-312',
-    roomNo: 'Room 12 (AYUSH OPD)',
-    name: 'Aarav Mukhopadhyay',
-    nameHindi: 'आरव मुखोपाध्याय',
-    age: 34,
-    gender: 'Male',
-    phone: '+91 94330 89124',
-    abhaId: '77-3819-0931-1122',
-    abhaAddress: 'aarav.m@abdm',
-    abhaVerified: true,
-    department: 'ayush',
-    priority: 'normal',
-    queueStatus: 'ready',
-    historyStatus: 'ready-for-review',
-    waitTimeMinutes: 14,
-    checkedInTime: '08:48 AM',
-    chiefComplaintShort: 'Chronic Agnimandya (indigestion), bloating, irregular bowel habits, Vata-Pitta Prakriti',
-    vitals: {
-      bp: '122/78',
-      heartRate: 72,
-      spo2: 99,
-      temperature: '98.2 °F',
-      bmi: 22.1
-    },
-    structuredHistory: {
-      chiefComplaint: {
-        primary: 'Chronic postprandial heaviness, sour belching (Amlapitta), and irregular bowels (Agnimandya)',
-        onset: 'Insidious onset over 6 months',
-        duration: '6 months',
-        severityScore: 4,
-        location: 'Epigastric and periumbilical regions',
-        aggravatingFactors: ['Late dinner', 'Spicy foods', 'Mental stress / screen time'],
-        relievingFactors: ['Warm water', 'Light fasting (Langhana)']
-      },
-      historyOfPresentIllness: 'A 34-year-old software engineer presents to the AYUSH OPD complaining of sluggish digestion, persistent post-meal bloating, and variable appetite for 6 months. Reports irregular sleep habits (working late shifts) and erratic meal timings. Seeking holistic Ayurvedic management.',
-      pastMedicalHistory: [],
-      pastSurgicalHistory: [],
-      drugHistory: [
-        { drugName: 'Pantoprazole 40mg', dosage: '40mg', frequency: 'PRN', adherence: 'Irregular', duration: 'Used on and off' }
-      ],
-      allergyHistory: [],
-      familyHistory: [],
-      personalHistory: {
-        diet: 'Vegetarian, irregular timings, frequent tea/coffee',
-        tobaccoUse: 'Nil',
-        alcoholUse: 'Nil',
-        sleep: '5-6 hours, erratic circadian rhythm',
-        physicalActivity: 'Sedentary desk work'
-      },
-      reviewOfSystems: [
-        { system: 'Gastrointestinal', status: 'Abnormal', findings: 'Vishamagni, Adhmana (flatulence), Vidaha (burning sensation)' }
-      ],
-      previousInvestigations: [],
-      dashavidhaPariksha: {
-        prakriti: { vata: 50, pitta: 35, kapha: 15, primaryDosha: 'Vata-Pitta Dvandvaja' },
-        vikriti: 'Vishamagni with Pitta-Kapha Samana',
-        sara: 'Madhyama Twak & Meda Sara',
-        samhanana: 'Madhyama (Medium body compactness)',
-        pramana: 'Prakrita (Normal body proportions)',
-        satmya: 'Katu-Lavana Satmya (accustomed to pungent-salty tastes)',
-        satva: 'Madhyama (Moderate resilience, mild work-related anxiety)',
-        aharaShakti: { abhyavaharana: 'Visham (Irregular intake)', jarana: 'Mandata (Delayed digestion > 4 hours)' },
-        vyayamaShakti: 'Madhyama',
-        vaya: 'Madhyama (Yuvavastha)'
-      }
-    },
-    aiSummary: {
-      id: 'sum_003',
-      patientId: 'pat_003',
-      generatedAt: '08:51:02 AM',
-      conciseSummary: '34M with Vata-Pitta Prakriti presenting with chronic Agnimandya, Amlapitta (acid dyspepsia), and Vishama Koshta exacerbated by Ratrijagarana (late nights) and sedentary routine. Dashavidha Pariksha indicates Vishamagni with Madhyama Bala. Deepana-Pachana and Ahara-Vihara regulation suggested.',
-      keyPositiveFindings: [
-        'Vata-Pitta Prakriti with Vishamagni (irregular digestive fire)',
-        'Sluggish digestion with postprandial Adhmana (bloating) and Vidaha',
-        'Ratrijagarana (erratic night work shifts) directly aggravating Vata and Pitta',
-        'Madhyama Satva and sedentary Vyayama Shakti'
-      ],
-      pertinentNegatives: [
-        'No gastrointestinal bleeding, weight loss, or dysphagia (rules down malignancy/ulcer bleed)',
-        'No organomegaly or localized severe peritoneal tenderness'
-      ],
-      redFlagAlerts: [],
-      differentialDiagnoses: [
-        { name: 'Agnimandya / Grahani Dosha (Ayurvedic)', icdCode: 'K30 (Functional Dyspepsia)', confidence: 94, clinicalRationale: 'Classic digestive fire disturbance with irregular appetite & sluggish bowel' },
-        { name: 'Amlapitta (Pitta Prakopa)', icdCode: 'K21.9 (GERD)', confidence: 85, clinicalRationale: 'Sour belching, epigastric burning aggravated by spicy food and night-shifts' }
-      ],
-      recommendedInvestigations: [
-        'Routine Complete Blood Count (CBC)',
-        'Upper GI Ultrasound (to rule out cholelithiasis)',
-        'Stool Routine & Microscopy'
-      ],
-      doctorVerification: {
-        status: 'pending'
-      }
-    },
-    documents: [],
-    timeline: [
-      { id: 't30', date: 'Today, 08:48 AM', yearMonth: 'Sep 2026', title: 'AYUSH Dashavidha Pariksha Intake', category: 'diagnosis', facility: 'City Hospital AYUSH OPD', summary: 'Completed Prakriti, Agni, and Satva digital assessment.', badgeText: 'AYUSH Pariksha' }
-    ]
-  },
-  {
-    id: 'pat_004',
-    token: 'A-109',
-    roomNo: 'Room 05 (Orthopedic OPD)',
-    name: 'Meenakshi Sundaram',
-    nameHindi: 'मीनाक्षी सुंदरम',
-    age: 64,
-    gender: 'Female',
-    phone: '+91 94441 55670',
-    abhaId: '63-9182-4402-9912',
-    abhaAddress: 'meenakshi.s@abdm',
-    abhaVerified: true,
-    department: 'orthopedics',
-    priority: 'normal',
-    queueStatus: 'waiting',
-    historyStatus: 'ready-for-review',
-    waitTimeMinutes: 18,
-    checkedInTime: '08:52 AM',
-    chiefComplaintShort: 'Bilateral knee joint pain and morning stiffness for 2 years, worse with stairs',
-    vitals: {
-      bp: '134/82',
-      heartRate: 74,
-      spo2: 98,
-      temperature: '98.4 °F',
-      bmi: 28.2
-    },
-    structuredHistory: {
-      chiefComplaint: {
-        primary: 'Bilateral knee pain, crepitus, and difficulty climbing stairs',
-        onset: 'Gradual onset 2 years ago',
-        duration: '2 years',
-        severityScore: 6,
-        location: 'Both knee joints (Right > Left)',
-        aggravatingFactors: ['Stairs', 'Squatting', 'Cold weather'],
-        relievingFactors: ['Rest', 'Knee brace', 'Analgesic gel']
-      },
-      historyOfPresentIllness: 'A 64-year-old female presents with progressive pain in bilateral knees for 2 years. Describes morning stiffness lasting under 20 minutes, audible crepitus, and pain aggravated by weight-bearing. Denies joint redness or warm effusions.',
-      pastMedicalHistory: [
-        { condition: 'Primary Osteoarthritis', diagnosedYear: '2024', currentStatus: 'Active' }
-      ],
-      pastSurgicalHistory: [],
-      drugHistory: [
-        { drugName: 'Paracetamol 650mg', dosage: '650mg', frequency: 'PRN', adherence: 'Regular', duration: '1 year' }
-      ],
-      allergyHistory: [],
-      familyHistory: [],
-      personalHistory: {
-        diet: 'Vegetarian',
-        tobaccoUse: 'Nil',
-        alcoholUse: 'Nil',
-        sleep: '6 hours',
-        physicalActivity: 'Limited by knee pain'
-      },
-      reviewOfSystems: [
-        { system: 'Musculoskeletal', status: 'Abnormal', findings: 'Knee crepitus, reduced flexion range, tender joint line' }
-      ],
-      previousInvestigations: []
-    },
-    aiSummary: {
-      id: 'sum_004',
-      patientId: 'pat_004',
-      generatedAt: '08:54:10 AM',
-      conciseSummary: '64F with progressive bilateral knee pain, weight-bearing exacerbation, and morning stiffness < 30 mins, highly characteristic of Primary Knee Osteoarthritis (Kellgren-Lawrence Grade II-III suspicion).',
-      keyPositiveFindings: [
-        'Bilateral knee pain, crepitus, and stair climbing limitation',
-        'Brief morning stiffness (< 30 min) favoring non-inflammatory etiology',
-        'Age 64 and BMI 28.2 providing biomechanical predisposition'
-      ],
-      pertinentNegatives: [
-        'No systemic fever or multiple joint polyarthritis (rules against rheumatoid arthritis)',
-        'No hot swollen joint (rules down septic arthritis)'
-      ],
-      redFlagAlerts: [],
-      differentialDiagnoses: [
-        { name: 'Primary Osteoarthritis of Bilateral Knees', icdCode: 'M17.0', confidence: 94, clinicalRationale: 'Classic mechanical knee pain with crepitus and age' },
-        { name: 'Pes Anserine Bursitis', icdCode: 'M70.5', confidence: 35, clinicalRationale: 'Medial joint line tenderness often co-exists' }
-      ],
-      recommendedInvestigations: [
-        'Weight-bearing Bilateral Knee X-Ray (AP and Lateral views)',
-        'Serum Uric Acid and ESR'
-      ],
-      doctorVerification: {
-        status: 'pending'
-      }
-    },
-    documents: [],
-    timeline: []
-  }
-];
-
-export const MOCK_AUDIT_LOGS: AdminAuditLog[] = [
-  {
-    id: 'log_01',
-    timestamp: '08:44:12 AM',
-    actor: 'MediKiosk AI Core',
-    role: 'System_AI',
-    action: 'URGENT_RED_FLAG_TRIGGERED',
-    patientToken: 'A-104',
-    details: 'Acute substernal chest pain + diaphoresis detected. Broadcast alert sent to Nursing Station & Triage Monitor.',
-    ipAddress: '192.168.1.104 (Terminal Kiosk-01)',
-    status: 'ALERT'
-  },
-  {
-    id: 'log_02',
-    timestamp: '08:42:04 AM',
-    actor: 'Rameshwar Patel',
-    role: 'Patient',
-    action: 'ABHA_CONSENT_GRANTED',
-    patientToken: 'A-104',
-    details: 'Patient granted ABDM Health Data Sharing consent (Purpose: OPD Clinical Triage, Valid for 24h).',
-    ipAddress: '192.168.1.104 (Terminal Kiosk-01)',
-    status: 'SUCCESS'
-  },
-  {
-    id: 'log_03',
-    timestamp: '08:37:45 AM',
-    actor: 'MediKiosk OCR Engine',
-    role: 'System_AI',
-    action: 'DOCUMENT_OCR_PROCESSED',
-    patientToken: 'B-208',
-    details: 'Biochemistry Lab report processed. Extracted HbA1c 8.8%, Fasting Blood Sugar 164 mg/dL with 98.2% confidence.',
-    ipAddress: '192.168.1.108 (Terminal Kiosk-02)',
-    status: 'SUCCESS'
-  },
-  {
-    id: 'log_04',
-    timestamp: '08:35:10 AM',
-    actor: 'Sunita Sharma',
-    role: 'Patient',
-    action: 'ABHA_AUTH_SUCCESS',
-    patientToken: 'B-208',
-    details: 'ABHA 82-1923-8821-3390 authenticated via OTP and demographic match.',
-    ipAddress: '192.168.1.108 (Terminal Kiosk-02)',
-    status: 'SUCCESS'
-  },
-  {
-    id: 'log_05',
-    timestamp: '08:31:22 AM',
-    actor: 'Dr. Venkatesh K.S.',
-    role: 'Doctor',
-    action: 'AI_SUMMARY_ACCEPTED',
-    patientToken: 'A-098',
-    details: 'Physician accepted AI clinical summary with minor modification to medication dosage.',
-    ipAddress: '192.168.2.14 (Workstation Room-04)',
-    status: 'SUCCESS'
-  }
-];
-
-export const ADMIN_METRICS = {
-  patientsToday: 342,
-  historiesCompletedKiosk: 316,
-  completionRatePct: 92.4,
-  avgIntakeTimeMinutes: 3.4,
-  traditionalIntakeMinutes: 14.8,
-  timeSavedMinutesPerPatient: 11.4,
-  urgentRedFlagsIntercepted: 18,
-  documentsOcrProcessed: 189,
-  ocrAccuracyRatePct: 97.6,
-  activeKiosks: [
-    { id: 'Kiosk-01', location: 'Gate 2 OPD Triage', status: 'In Use', patientToken: 'A-104', language: 'Hindi' },
-    { id: 'Kiosk-02', location: 'Main OPD Lobby', status: 'In Use', patientToken: 'B-208', language: 'Hindi' },
-    { id: 'Kiosk-03', location: 'AYUSH Wing 1st Floor', status: 'Ready', patientToken: 'C-312', language: 'English' },
-    { id: 'Kiosk-04', location: 'Gate 3 Ortho Block', status: 'Ready', patientToken: 'Idle', language: 'Marathi' }
-  ]
-};

@@ -19,6 +19,8 @@ import { KioskDocumentReview } from './pages/patient/KioskDocumentReview';
 import { KioskTimeline } from './pages/patient/KioskTimeline';
 import { KioskSummary } from './pages/patient/KioskSummary';
 import { KioskCompletion } from './pages/patient/KioskCompletion';
+import { PatientPortalAuth } from './pages/patient/PatientPortalAuth';
+import { PatientDashboard } from './pages/patient/PatientDashboard';
 
 // Doctor Clinical Workstation Pages
 import { DoctorLayout } from './pages/doctor/DoctorLayout';
@@ -63,6 +65,11 @@ export function App() {
                   <Route path="summary" element={<KioskSummary />} />
                   <Route path="completion" element={<KioskCompletion />} />
                 </Route>
+
+                {/* Patient Personal Portal & Dashboard (Specification 3.2: Personal login ID and password) */}
+                <Route path="/patient/portal/login" element={<PatientPortalAuth />} />
+                <Route path="/patient/portal/register" element={<PatientPortalAuth />} />
+                <Route path="/patient/dashboard" element={<PatientDashboard />} />
 
                 {/* Clinical Staff Sign In */}
                 <Route path="/login" element={<LoginPage />} />

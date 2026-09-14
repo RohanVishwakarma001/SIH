@@ -11,7 +11,8 @@ import {
   Sparkles,
   ArrowRight,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  User
 } from 'lucide-react';
 import { useKiosk } from '../../context/KioskContext';
 import { useAccessibility } from '../../context/AccessibilityContext';
@@ -49,36 +50,38 @@ export const KioskWelcome: React.FC = () => {
   return (
     <div className="flex flex-col items-center justify-center py-4 sm:py-6 space-y-8 animate-in fade-in duration-300">
       {/* Welcome Hero Banner */}
-      <div className="text-center space-y-3 max-w-2xl">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-med-green/10 border border-med-green/30 text-med-green text-xs font-semibold uppercase tracking-wider">
+      <div className="text-center space-y-3 max-w-3xl">
+        <div className="inline-flex flex-wrap items-center justify-center gap-2 px-3.5 py-1.5 rounded-full bg-med-green/10 border border-med-green/30 text-med-green text-xs font-semibold uppercase tracking-wider">
           <Sparkles className="w-3.5 h-3.5" />
-          Smart India Hackathon • High-Volume OPD Pre-Consultation
+          <span>All India Institute of Ayurveda • Ministry of Ayush</span>
+          <span className="text-med-text-muted hidden sm:inline">•</span>
+          <span className="text-emerald-300 hidden sm:inline">Problem Statement 4</span>
         </div>
 
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-med-text-primary">
-          Welcome to <span className="text-med-green">MediKiosk</span>
+          Medi<span className="text-med-green">Kiosk</span> Clinical Intake Platform
         </h1>
 
         <p className="text-base sm:text-lg text-med-text-secondary leading-relaxed">
-          डॉक्टर से मिलने से पहले अपनी बीमारी की पूरी जानकारी आसान भाषा में दर्ज करें।
+          डॉक्टर से मिलने से पहले अपनी बीमारी की पूरी जानकारी, पुरानी पर्चियां एवं आयुष दशविध परीक्षा दर्ज करें।
           <br className="hidden sm:inline" />
           <span className="text-med-text-muted text-sm sm:text-base">
-            Prepare your complete clinical history with AI assistance before meeting your doctor.
+            Autonomous multimodal intake resolving the 2–5 minute OPD bottleneck across 4,000–10,000 daily patients.
           </span>
         </p>
 
-        <div className="flex items-center justify-center gap-6 pt-2 text-xs text-med-text-muted">
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 pt-2 text-xs text-med-text-muted">
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-med-green" />
-            <span>Voice & Touch Enabled</span>
+            <span>Dual Voice & Touch Input</span>
           </div>
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-med-green" />
-            <span>ABDM / ABHA Integrated</span>
+            <span>ABDM / ABHA FHIR Interoperability</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Clock className="w-4 h-4 text-med-green" />
-            <span>Saves ~12 Minutes per OPD</span>
+            <span>Dashavidha & Ashtavidha Pariksha</span>
           </div>
         </div>
       </div>
@@ -150,6 +153,27 @@ export const KioskWelcome: React.FC = () => {
             );
           })}
         </div>
+      </div>
+
+      {/* Patient Personal Portal Link (Module 3.2 Specification) */}
+      <div className="w-full max-w-2xl p-4 rounded-2xl bg-surface-elevated border border-med-green/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-surface">
+        <div className="flex items-center gap-3 text-left">
+          <div className="w-10 h-10 rounded-xl bg-med-green/20 text-med-green flex items-center justify-center shrink-0">
+            <User className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="font-bold text-sm text-med-text-primary">Personal Patient Portal & Health Records</div>
+            <div className="text-xs text-med-text-secondary">Have an account? Login with personal ID & password to store medical records and manage consent.</div>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate('/patient/portal/login')}
+          className="shrink-0 font-bold border-med-green/40 hover:bg-med-green/10 text-med-text-primary"
+        >
+          Patient Login / पोर्टल प्रवेश
+        </Button>
       </div>
 
       {/* Quick Start Action */}

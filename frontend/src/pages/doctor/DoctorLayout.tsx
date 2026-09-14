@@ -26,8 +26,10 @@ export const DoctorLayout: React.FC = () => {
   const location = useLocation();
   const { patients, selectedPatient, searchQuery, setSearchQuery } = useDoctor();
 
-  const urgentCount = patients.filter(p => p.priority === 'urgent').length;
+  const urgentPatients = patients.filter(p => p.priority === 'urgent');
+  const urgentCount = urgentPatients.length;
   const waitingCount = patients.filter(p => p.queueStatus === 'waiting').length;
+  const firstUrgentPatient = urgentPatients[0];
 
   const doctorName = apiClient.getUserName() || 'Doctor';
   const initials = doctorName.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
@@ -50,11 +52,12 @@ export const DoctorLayout: React.FC = () => {
             <Activity className="w-5 h-5" />
           </div>
           <div>
-            <div className="font-extrabold text-base tracking-tight text-med-text-primary">
-              Medi<span className="text-med-green">Kiosk</span>
+            <div className="font-extrabold text-base tracking-tight text-med-text-primary flex items-center gap-1.5">
+              <span>Medi<span className="text-med-green">Kiosk</span></span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-bold border border-emerald-500/30">AIIA</span>
             </div>
             <div className="text-[10px] uppercase font-bold tracking-wider text-med-text-muted">
-              Clinical Workstation v2.4
+              Ministry of Ayush • Case-Taking
             </div>
           </div>
         </div>
@@ -97,7 +100,7 @@ export const DoctorLayout: React.FC = () => {
           </NavLink>
 
           <NavLink
-            to={`/doctor/patient/${selectedPatient.id}`}
+            to={selectedPatient ? `/doctor/patient/${selectedPatient.id}` : '/doctor/dashboard'}
             className={({ isActive }) =>
               `flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                 isActive
@@ -153,14 +156,14 @@ export const DoctorLayout: React.FC = () => {
         </nav>
 
         {/* Urgent Alert Warning strip in sidebar */}
-        {urgentCount > 0 && (
+        {firstUrgentPatient && (
           <div className="p-3 m-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 space-y-1">
             <div className="flex items-center gap-1.5 font-bold text-red-400">
               <AlertTriangle className="w-3.5 h-3.5" />
-              <span>{urgentCount} Urgent Red-Flag Alert</span>
+              <span>{urgentCount} Urgent Red-Flag Alert{urgentCount > 1 ? 's' : ''}</span>
             </div>
             <p className="text-[11px] text-red-300/80 leading-tight">
-              Token {selectedPatient.token} requires {selectedPatient.redFlag?.title?.toLowerCase() || 'immediate'} evaluation.
+              Token {firstUrgentPatient.token} requires {firstUrgentPatient.redFlag?.title?.toLowerCase() || 'immediate'} evaluation.
             </p>
           </div>
         )}

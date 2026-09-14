@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FileText, 
@@ -13,28 +13,65 @@ import {
   User, 
   ShieldCheck, 
   Download,
-  Check
+  Check,
+  AlertTriangle,
+  Activity
 } from 'lucide-react';
 import { useDoctor } from '../../context/DoctorContext';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { MOCK_DOCUMENTS } from '../../data/mockData';
 
 export const DoctorDocumentViewer: React.FC = () => {
   const navigate = useNavigate();
   const { selectedPatient } = useDoctor();
 
-  const documents = selectedPatient.documents.length > 0 ? selectedPatient.documents : MOCK_DOCUMENTS;
-  const [selectedDocId, setSelectedDocId] = useState<string>(documents[0].id);
+  const documents = selectedPatient?.documents || [];
+  const [selectedDocId, setSelectedDocId] = useState<string>('');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [rotation, setRotation] = useState<number>(0);
 
   const currentDoc = documents.find(d => d.id === selectedDocId) || documents[0];
 
+  useEffect(() => {
+    if (!selectedDocId && documents.length > 0) {
+      setSelectedDocId(documents[0].id);
+    }
+  }, [documents, selectedDocId]);
+
   const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 25, 200));
   const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 25, 50));
   const handleRotate = () => setRotation(prev => (prev + 90) % 360);
+
+  if (!selectedPatient) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-med-text-secondary text-sm">
+        <p>No patient selected.</p>
+        <Button variant="primary" size="sm" onClick={() => navigate('/doctor/dashboard')}>
+          Return to OPD Queue
+        </Button>
+      </div>
+    );
+  }
+
+  if (!currentDoc) {
+    return (
+      <div className="space-y-4 max-w-7xl mx-auto animate-in fade-in duration-300">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => navigate(`/doctor/patient/${selectedPatient.id}`)}
+          leftIcon={<ArrowLeft className="w-4 h-4" />}
+        >
+          Back to Patient
+        </Button>
+        <div className="flex flex-col items-center justify-center min-h-[40vh] gap-2 text-med-text-secondary text-sm">
+          <FileText className="w-8 h-8 text-med-text-muted" />
+          <p>{selectedPatient.name} has no digitized documents yet.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 max-w-7xl mx-auto animate-in fade-in duration-300">
@@ -142,18 +179,20 @@ export const DoctorDocumentViewer: React.FC = () => {
                 </div>
               </div>
 
-              {/* High-fidelity text box with bounding indicators */}
-              <div className="p-3 rounded-lg bg-surface border border-med-green/40 space-y-2 text-xs">
-                <div className="text-[10px] uppercase font-bold text-med-green flex items-center justify-between">
-                  <span>Extracted Bounding Box 1 (Rx)</span>
-                  <CheckCircle2 className="w-3.5 h-3.5 text-med-green" />
+              {/* Extracted medications, derived from this document's real entities */}
+              {currentDoc.entities.some(e => e.category === 'medication') && (
+                <div className="p-3 rounded-lg bg-surface border border-med-green/40 space-y-2 text-xs">
+                  <div className="text-[10px] uppercase font-bold text-med-green flex items-center justify-between">
+                    <span>Extracted Medications</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-med-green" />
+                  </div>
+                  <div className="font-mono text-med-text-primary space-y-1">
+                    {currentDoc.entities.filter(e => e.category === 'medication').map((e, i) => (
+                      <div key={i}>{e.value}{e.dosage ? ` (${e.dosage})` : ''}{e.frequency ? ` ${e.frequency}` : ''}</div>
+                    ))}
+                  </div>
                 </div>
-                <div className="font-mono text-med-text-primary space-y-1">
-                  <div>Tab. Telmisartan 40mg PO OD (Hypertension)</div>
-                  <div>Tab. Atorvastatin 20mg PO HS (Dyslipidemia)</div>
-                  <div>Tab. Metformin 500mg PO BD (T2DM)</div>
-                </div>
-              </div>
+              )}
 
               <div className="p-3 rounded-lg bg-surface border border-border text-xs text-med-text-secondary leading-relaxed font-mono">
                 {currentDoc.rawOcrText}
@@ -169,6 +208,50 @@ export const DoctorDocumentViewer: React.FC = () => {
 
         {/* Extracted Clinical Entities & Confidence Inspector (4 cols) */}
         <div className="lg:col-span-4 space-y-3">
+          {/* Drug Interactions Banner */}
+          {currentDoc.drugInteractions && currentDoc.drugInteractions.length > 0 && (
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/40 space-y-1.5 animate-in fade-in">
+              <div className="flex items-center gap-1.5 text-amber-400 font-bold text-xs">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Potential Drug-Drug Interaction</span>
+              </div>
+              {currentDoc.drugInteractions.map((ddi, i) => (
+                <div key={i} className="text-[11px] bg-surface/60 p-2 rounded border border-amber-500/20">
+                  <div className="font-bold text-med-text-primary flex justify-between">
+                    <span>{ddi.drug1} + {ddi.drug2}</span>
+                    <span className="text-amber-400">{ddi.severity}</span>
+                  </div>
+                  <div className="text-med-text-secondary mt-0.5">{ddi.clinicalEffect}</div>
+                  <div className="text-amber-300 font-medium mt-0.5">Rec: {ddi.recommendation}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Abnormal Lab Findings */}
+          {currentDoc.abnormalLabFindings && currentDoc.abnormalLabFindings.length > 0 && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/40 space-y-1.5 animate-in fade-in">
+              <div className="flex items-center gap-1.5 text-red-400 font-bold text-xs">
+                <Activity className="w-3.5 h-3.5" />
+                <span>Out-of-Range Lab Highlights</span>
+              </div>
+              <div className="space-y-1">
+                {currentDoc.abnormalLabFindings.map((lab, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs p-1.5 rounded bg-surface/60 border border-red-500/20">
+                    <div>
+                      <div className="font-semibold text-med-text-primary text-[11px]">{lab.testName}</div>
+                      <div className="text-[10px] text-med-text-muted">Ref: {lab.referenceRange}</div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-mono font-bold text-red-400 text-xs">{lab.value}</span>
+                      <span className="ml-1.5 px-1 py-0.2 rounded bg-red-500/20 text-red-300 text-[9px] font-bold">{lab.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="text-xs font-bold text-med-text-secondary uppercase tracking-wider px-1">
             Extracted Clinical Entities ({currentDoc.entities.length})
           </div>

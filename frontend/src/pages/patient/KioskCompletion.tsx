@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import { 
@@ -11,7 +11,10 @@ import {
   QrCode, 
   ArrowRight,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  Lock,
+  Shield,
+  ShieldCheck
 } from 'lucide-react';
 import { useKiosk } from '../../context/KioskContext';
 import { useAccessibility } from '../../context/AccessibilityContext';
@@ -22,6 +25,7 @@ export const KioskCompletion: React.FC = () => {
   const navigate = useNavigate();
   const { generatedToken, authData, resetKiosk, finalizeVisit, assignedDoctorName, consultationRoom, estimatedWaitMins } = useKiosk();
   const { speakText } = useAccessibility();
+  const [countdown, setCountdown] = useState(30);
 
   useEffect(() => {
     finalizeVisit().catch(() => {});
@@ -43,6 +47,22 @@ export const KioskCompletion: React.FC = () => {
     if (!generatedToken) return;
     speakText('आपकी क्लिनिकल जानकारी सफलतापूर्वक दर्ज कर ली गई है। आपका टोकन नंबर है ' + generatedToken + '। कृपया प्रतीक्षा करें।', 'hi');
   }, [generatedToken]);
+
+  // DPDP Act 2023: Automatic 30-second session memory & token wipe
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleFinish();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const handleFinish = () => {
     resetKiosk();
@@ -122,6 +142,35 @@ export const KioskCompletion: React.FC = () => {
           </div>
         </div>
       </Card>
+
+      {/* Module D: DPDP Act 2023 Automatic Session Termination Banner */}
+      <div className="w-full p-4 rounded-xl bg-surface border border-med-green/30 space-y-2">
+        <div className="flex items-center justify-between text-xs font-semibold">
+          <div className="flex items-center gap-2 text-med-text-primary">
+            <Lock className="w-4 h-4 text-med-green shrink-0" />
+            <span>DPDP Act 2023 • Auto Session Wipe in:</span>
+          </div>
+          <span className="font-mono font-bold text-med-green text-sm">{countdown}s</span>
+        </div>
+        
+        {/* Progress bar */}
+        <div className="w-full h-1.5 bg-surface-elevated rounded-full overflow-hidden border border-border">
+          <div 
+            className="h-full bg-med-green transition-all duration-1000 ease-linear rounded-full"
+            style={{ width: `${(countdown / 30) * 100}%` }}
+          />
+        </div>
+
+        <div className="flex items-center justify-between text-[11px] text-med-text-muted pt-0.5">
+          <span>Temporary intake session data is cleared automatically after submission.</span>
+          <button
+            onClick={handleFinish}
+            className="text-med-green hover:underline font-bold"
+          >
+            Clear Now & Exit
+          </button>
+        </div>
+      </div>
 
       {/* Action Buttons: Print Slip, Send to Mobile, Finish */}
       <div className="w-full space-y-3">

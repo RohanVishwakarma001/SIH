@@ -1,14 +1,25 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Patient, PriorityLevel, DepartmentId, DoctorConsultationNote } from '../types';
-import { MOCK_PATIENTS } from '../data/mockData';
 import { api } from '../services/api';
 import { apiClient } from '../lib/api-client';
 
 const getDoctorName = () => apiClient.getUserName() || 'Attending Doctor';
 
+const emptyConsultationNote = (patientId = ''): DoctorConsultationNote => ({
+  patientId,
+  doctorName: getDoctorName(),
+  provisionalDiagnosis: '',
+  icdCode: '',
+  clinicalNotes: '',
+  prescriptions: [],
+  orderedInvestigations: [],
+  followUpDays: 0,
+  isPushedToAbha: false
+});
+
 interface DoctorContextType {
   patients: Patient[];
-  selectedPatient: Patient;
+  selectedPatient: Patient | undefined;
   filterPriority: 'all' | PriorityLevel;
   filterDepartment: 'all' | DepartmentId;
   searchQuery: string;
@@ -16,7 +27,9 @@ interface DoctorContextType {
   isSavingConsultation: boolean;
   isConsultationSaved: boolean;
   isLoadingWorkspace: boolean;
-  
+  isLoadingQueue: boolean;
+  queueError: string | null;
+
   // Actions
   selectPatientById: (id: string) => Promise<void>;
   setFilterPriority: (priority: 'all' | PriorityLevel) => void;
@@ -34,39 +47,24 @@ interface DoctorContextType {
 const DoctorContext = createContext<DoctorContextType | undefined>(undefined);
 
 export const DoctorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [patients, setPatients] = useState<Patient[]>(MOCK_PATIENTS);
-  const [selectedPatientId, setSelectedPatientId] = useState<string>(MOCK_PATIENTS[0].id);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [selectedPatientId, setSelectedPatientId] = useState<string>('');
   const [filterPriority, setFilterPriority] = useState<'all' | PriorityLevel>('all');
   const [filterDepartment, setFilterDepartment] = useState<'all' | DepartmentId>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState<boolean>(false);
-  
-  const [consultationNote, setConsultationNote] = useState<DoctorConsultationNote>({
-    patientId: MOCK_PATIENTS[0].id,
-    doctorName: getDoctorName(),
-    provisionalDiagnosis: 'Acute Coronary Syndrome (Rule out Anterior Wall STEMI)',
-    icdCode: 'I21.9',
-    clinicalNotes: 'Pt presents with classic retrosternal chest pain + diaphoresis. Stat ECG reveals 2mm ST-elevations in V2-V4. Initiated ACS loading dose protocol.',
-    prescriptions: [
-      { medicine: 'Tab. Aspirin', dosage: '300mg', frequency: 'STAT (Chewable)', duration: '1 day', instructions: 'Take immediately with water' },
-      { medicine: 'Tab. Clopidogrel', dosage: '300mg', frequency: 'STAT', duration: '1 day', instructions: 'Loading dose' },
-      { medicine: 'Tab. Atorvastatin', dosage: '80mg', frequency: 'STAT', duration: '1 day', instructions: 'High intensity statin' },
-      { medicine: 'S/L Sorbitrate', dosage: '5mg', frequency: 'SOS', duration: '3 days', instructions: 'Place under tongue if chest pain recurs' }
-    ],
-    orderedInvestigations: [
-      'Stat 12-Lead Electrocardiogram (ECG)',
-      'High Sensitivity Troponin-I (hs-cTnI)',
-      'Echocardiogram (Bedside 2D Echo)'
-    ],
-    followUpDays: 0,
-    isPushedToAbha: false
-  });
+  const [isLoadingQueue, setIsLoadingQueue] = useState<boolean>(true);
+  const [queueError, setQueueError] = useState<string | null>(null);
+
+  const [consultationNote, setConsultationNote] = useState<DoctorConsultationNote>(emptyConsultationNote());
 
   const [isSavingConsultation, setIsSavingConsultation] = useState<boolean>(false);
   const [isConsultationSaved, setIsConsultationSaved] = useState<boolean>(false);
 
   // Synchronize Live OPD Queue with Fastify Backend
   const refreshQueue = async () => {
+    setIsLoadingQueue(true);
+    setQueueError(null);
     try {
       const res = await api.getDoctorQueue({
         priority: filterPriority,
@@ -74,57 +72,57 @@ export const DoctorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         query: searchQuery,
       });
 
-      if (res?.queue && Array.isArray(res.queue) && res.queue.length > 0) {
-        // Merge backend queue data with real patient details
-        setPatients(prev => {
-          const map = new Map(prev.map(p => [p.id, p]));
-          return res.queue.map(q => {
-            const existing = map.get(q.id) || MOCK_PATIENTS.find(m => m.id === q.id) || {
-              id: q.id,
-              token: q.token,
-              roomNo: 'Room 04',
-              name: q.name,
-              age: q.age,
-              gender: q.gender,
-              phone: q.phone,
-              abhaId: q.abhaId,
-              abhaVerified: Boolean(q.abhaId),
-              priority: (q.priority || 'normal').toLowerCase() as PriorityLevel,
-              queueStatus: (q.queueStatus || 'waiting') as any,
-              historyStatus: (q.historyStatus || 'ready_for_review') as any,
-              waitTimeMinutes: q.waitTimeMinutes || 10,
-              checkedInTime: 'Today',
-              chiefComplaintShort: q.chiefComplaintShort || 'OPD Intake',
-              department: (q.department || 'general') as any,
-              vitals: { bp: '120/80', heartRate: 72, spo2: 98, temperature: '98.6 °F', bmi: 22.5 },
-              structuredHistory: {
-                chiefComplaint: { primary: q.chiefComplaintShort || 'General Consultation', onset: 'Recent', duration: 'Few days', severityScore: 5, location: 'Generalized', aggravatingFactors: [], relievingFactors: [] },
-                historyOfPresentIllness: 'Patient registered through MediKiosk terminal intake.',
-                pastMedicalHistory: [], pastSurgicalHistory: [], drugHistory: [], allergyHistory: [], familyHistory: [],
-                personalHistory: { diet: 'Mixed', tobaccoUse: 'Nil', alcoholUse: 'Nil', sleep: '7 hrs', physicalActivity: 'Moderate' },
-                reviewOfSystems: [], previousInvestigations: []
-              },
-              aiSummary: {
-                conciseSummary: `Clinical intake for ${q.name}.`,
-                keyPositiveFindings: [q.chiefComplaintShort || 'Checkup'],
-                pertinentNegatives: [],
-                redFlagAlerts: q.priority === 'urgent' ? ['High Priority Review'] : [],
-                differentialDiagnoses: [{ name: 'Clinical Evaluation Needed', icdCode: 'R69', confidence: 80 }],
-                recommendedInvestigations: ['Routine Baseline Investigations']
-              },
-              timeline: [],
-              documents: []
-            };
-            return {
-              ...existing,
-              ...q,
-              priority: (q.priority || existing.priority).toLowerCase() as PriorityLevel,
-            };
-          });
+      const queue = Array.isArray(res?.queue) ? res.queue : [];
+      setPatients(prev => {
+        const map = new Map(prev.map(p => [p.id, p]));
+        return queue.map(q => {
+          const existing = map.get(q.id) || {
+            id: q.id,
+            token: q.token,
+            roomNo: q.roomNo || 'Not assigned',
+            name: q.name,
+            age: q.age,
+            gender: q.gender,
+            phone: q.phone,
+            abhaId: q.abhaId,
+            abhaVerified: Boolean(q.abhaId),
+            priority: (q.priority || 'normal').toLowerCase() as PriorityLevel,
+            queueStatus: (q.queueStatus || 'waiting') as any,
+            historyStatus: (q.historyStatus || 'not_started') as any,
+            waitTimeMinutes: q.waitTimeMinutes ?? 0,
+            checkedInTime: q.checkedInTime || 'Today',
+            chiefComplaintShort: q.chiefComplaintShort || 'Pending clinical intake',
+            department: (q.department || 'general') as any,
+            vitals: { bp: 'Not recorded', heartRate: 0, spo2: 0, temperature: 'Not recorded', bmi: 0 },
+            structuredHistory: {
+              chiefComplaint: { primary: q.chiefComplaintShort || 'Not yet recorded', onset: 'Not yet recorded', duration: 'Not yet recorded', severityScore: 0, location: 'Not yet recorded', aggravatingFactors: [], relievingFactors: [] },
+              historyOfPresentIllness: 'Clinical history has not been captured yet for this patient.',
+              pastMedicalHistory: [], pastSurgicalHistory: [], drugHistory: [], allergyHistory: [], familyHistory: [],
+              personalHistory: { diet: 'Not recorded', tobaccoUse: 'Not recorded', alcoholUse: 'Not recorded', sleep: 'Not recorded', physicalActivity: 'Not recorded' },
+              reviewOfSystems: [], previousInvestigations: []
+            },
+            aiSummary: {
+              conciseSummary: 'AI clinical summary has not been generated yet for this patient.',
+              keyPositiveFindings: [],
+              pertinentNegatives: [],
+              redFlagAlerts: q.priority === 'urgent' ? ['High Priority Review'] : [],
+              differentialDiagnoses: [],
+              recommendedInvestigations: []
+            },
+            timeline: [],
+            documents: []
+          };
+          return {
+            ...existing,
+            ...q,
+            priority: (q.priority || existing.priority).toLowerCase() as PriorityLevel,
+          };
         });
-      }
-    } catch {
-      // Retain local patients if offline
+      });
+    } catch (err: any) {
+      setQueueError(err?.message || 'Unable to load the OPD queue. Please retry.');
+    } finally {
+      setIsLoadingQueue(false);
     }
   };
 
@@ -132,7 +130,7 @@ export const DoctorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     refreshQueue();
   }, [filterPriority, filterDepartment, searchQuery]);
 
-  const selectedPatient = patients.find(p => p.id === selectedPatientId) || patients[0];
+  const selectedPatient = patients.find(p => p.id === selectedPatientId);
 
   // Fetch Aggregated Workspace via single GET /api/v1/doctor/patients/:patientId/workspace call
   const selectPatientById = async (id: string) => {
@@ -162,7 +160,7 @@ export const DoctorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setIsLoadingWorkspace(false);
     }
 
-    const pat = patients.find(p => p.id === id) || MOCK_PATIENTS.find(m => m.id === id);
+    const pat = patients.find(p => p.id === id);
     if (pat) {
       setConsultationNote({
         patientId: pat.id,
@@ -203,7 +201,7 @@ export const DoctorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }));
 
     // Record verified summary in PostgreSQL
-    const sumId = selectedPatient.aiSummary?.id || selectedPatientId;
+    const sumId = selectedPatient?.aiSummary?.id || selectedPatientId;
     api.verifySummary(sumId, action, modifiedText).catch(() => {});
   };
 
@@ -284,6 +282,8 @@ export const DoctorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isSavingConsultation,
         isConsultationSaved,
         isLoadingWorkspace,
+        isLoadingQueue,
+        queueError,
         selectPatientById,
         setFilterPriority,
         setFilterDepartment,

@@ -11,19 +11,22 @@ import {
   ShieldCheck,
   Calendar,
   User,
-  Plus
+  Plus,
+  AlertTriangle,
+  Activity,
+  Pill,
+  ShieldAlert
 } from 'lucide-react';
 import { useKiosk } from '../../context/KioskContext';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { MOCK_DOCUMENTS } from '../../data/mockData';
 
 export const KioskDocumentReview: React.FC = () => {
   const navigate = useNavigate();
   const { activeOcrDoc, updateExtractedEntity } = useKiosk();
 
-  const doc = activeOcrDoc || MOCK_DOCUMENTS[0];
+  const doc = activeOcrDoc;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
 
@@ -33,9 +36,22 @@ export const KioskDocumentReview: React.FC = () => {
   };
 
   const handleSaveEdit = (id: string) => {
+    if (!doc) return;
     updateExtractedEntity(doc.id, id, editValue);
     setEditingId(null);
   };
+
+  if (!doc) {
+    return (
+      <div className="flex flex-col items-center justify-center max-w-xl mx-auto py-16 gap-3 text-med-text-secondary text-sm">
+        <FileText className="w-8 h-8 text-med-text-muted" />
+        <p>No document has been uploaded yet.</p>
+        <Button variant="primary" size="sm" onClick={() => navigate('/patient/documents')}>
+          Upload a Document
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col max-w-5xl w-full mx-auto py-4 space-y-6 animate-in fade-in duration-300">
@@ -64,6 +80,55 @@ export const KioskDocumentReview: React.FC = () => {
           Confirm & View Timeline / पुष्टि करें
         </Button>
       </div>
+
+      {/* Module B Intelligence Alerts: Out-of-Range Lab Values & Drug-Drug Interactions */}
+      {((doc.drugInteractions && doc.drugInteractions.length > 0) || (doc.abnormalLabFindings && doc.abnormalLabFindings.length > 0)) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Drug Interactions Banner */}
+          {doc.drugInteractions && doc.drugInteractions.length > 0 && (
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+              <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                <AlertTriangle className="w-4 h-4" />
+                <span>Potential Drug-Drug Interaction Flagged</span>
+              </div>
+              {doc.drugInteractions.map((ddi, i) => (
+                <div key={i} className="text-xs space-y-1 bg-surface/50 p-2.5 rounded-lg border border-amber-500/20">
+                  <div className="font-semibold text-med-text-primary flex items-center justify-between">
+                    <span>{ddi.drug1} + {ddi.drug2}</span>
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px] font-bold">{ddi.severity}</span>
+                  </div>
+                  <p className="text-med-text-secondary">{ddi.clinicalEffect}</p>
+                  <p className="text-amber-300 font-medium">Rec: {ddi.recommendation}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Abnormal Out-of-Range Lab Values */}
+          {doc.abnormalLabFindings && doc.abnormalLabFindings.length > 0 && (
+            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 space-y-2">
+              <div className="flex items-center gap-2 text-red-400 font-bold text-sm">
+                <Activity className="w-4 h-4" />
+                <span>Abnormal Out-of-Range Lab Findings</span>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                {doc.abnormalLabFindings.map((lab, i) => (
+                  <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-surface/50 border border-red-500/20 text-xs">
+                    <div>
+                      <div className="font-bold text-med-text-primary">{lab.testName}</div>
+                      <div className="text-[11px] text-med-text-muted">Ref Range: {lab.referenceRange}</div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-mono font-bold text-red-400">{lab.value}</span>
+                      <span className="ml-2 px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 font-bold text-[10px] uppercase">{lab.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Split Layout: Original Scanned Document vs Extracted Entities */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -113,6 +178,20 @@ export const KioskDocumentReview: React.FC = () => {
                   </span>
                   {doc.entities.filter(e => e.category === 'diagnosis').map((e, idx) => (
                     <div key={idx} className="font-semibold text-sm text-med-text-primary">{e.value}</div>
+                  ))}
+                </div>
+              ) : null}
+
+              {/* Surgical & Procedure History */}
+              {(doc.procedureHistory?.length || doc.entities.filter(e => e.category === 'procedure').length > 0) ? (
+                <div className="p-2.5 rounded bg-surface border border-blue-500/30 relative">
+                  <span className="text-[10px] uppercase font-bold text-blue-400 block mb-1">
+                    Past Procedure & Surgical History
+                  </span>
+                  {doc.procedureHistory?.map((proc, idx) => (
+                    <div key={idx} className="font-semibold text-xs text-med-text-primary">• {proc}</div>
+                  )) || doc.entities.filter(e => e.category === 'procedure').map((e, idx) => (
+                    <div key={idx} className="font-semibold text-xs text-med-text-primary">• {e.value}</div>
                   ))}
                 </div>
               ) : null}
@@ -186,11 +265,18 @@ export const KioskDocumentReview: React.FC = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge
-                        variant={entity.category === 'medication' ? 'green' : entity.category === 'diagnosis' ? 'attention' : 'normal'}
+                        variant={
+                          entity.category === 'medication' ? 'green' : 
+                          entity.category === 'diagnosis' ? 'attention' : 
+                          entity.category === 'procedure' ? 'normal' : 'normal'
+                        }
                         size="sm"
                       >
-                        {entity.category.toUpperCase()}
+                        {entity.category === 'procedure' ? 'PROCEDURE / SURGERY' : entity.category.toUpperCase()}
                       </Badge>
+                      {entity.isAbnormal && (
+                        <Badge variant="urgent" size="sm">OUT OF RANGE</Badge>
+                      )}
                       <span className="text-[11px] text-med-text-muted font-mono">
                         {entity.confidence}% confidence
                       </span>
@@ -221,6 +307,12 @@ export const KioskDocumentReview: React.FC = () => {
                           {entity.dosage && (
                             <div className="text-xs text-med-text-secondary">
                               Dose: {entity.dosage} • Frequency: {entity.frequency}
+                            </div>
+                          )}
+                          {entity.referenceRange && (
+                            <div className="text-xs text-med-text-muted mt-0.5">
+                              Reference Range: <span className="font-mono text-med-text-secondary">{entity.referenceRange}</span>
+                              {entity.unit && ` (${entity.unit})`}
                             </div>
                           )}
                         </div>

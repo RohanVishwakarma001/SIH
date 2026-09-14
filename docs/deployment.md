@@ -1,128 +1,123 @@
-# MediKiosk Backend Deployment Guide (Render & Cloud Production)
+# MediKiosk Deployment Guide (Render + Vercel, no Docker)
 
-This guide provides step-by-step instructions for deploying the **MediKiosk AI Clinical Core Backend** to production on [Render](https://render.com) or equivalent container environments (AWS ECS, Google Cloud Run, Railway, DigitalOcean).
+This guide deploys the backend to [Render](https://render.com) as a native Node web service (no containers) and the frontend to [Vercel](https://vercel.com).
+
+---
+
+## 0. What's real vs. simulated in this deployment
+
+Before going live, know what's actually wired to a real vendor and what isn't:
+
+- **Real**: authentication, database, patient records, consent, drug-interaction checking, and (once you set `AI_PROVIDER`/an API key below) LLM-based clinical summarization and document entity extraction.
+- **Simulated ("sandbox")**: OCR text extraction, voice/ASR transcription, and ABDM/Aadhaar OTP verification. These need vendor credentials this project doesn't have out of the box — a real OCR vendor (Google Cloud Vision, AWS Textract, Azure Document Intelligence), a real speech API (Bhashini/AI4Bharat), and an NHA ABDM HIP/HIU sandbox or production registration (an organizational onboarding process, not just an API key). The UI labels these honestly (e.g. "ABDM Sandbox", "OTP gateway not yet connected") rather than pretending they're live. To make them real, implement the corresponding provider in `backend/src/ai/providers/` (OCR/speech) or `backend/src/integrations/abha/` (ABDM) once you have credentials, following the existing `LLMProvider`/`OCRProvider` interface pattern.
 
 ---
 
 ## 1. Production Architecture Overview
 
-- **Runtime**: Node.js v20+ / Alpine Linux container
+- **Runtime**: Node.js 20+, native (no Docker)
 - **Web Framework**: Fastify + TypeScript
-- **Database**: PostgreSQL (v15+) managed database
-- **ORM**: Prisma (with automated migration on deploy)
-- **Networking**: Binds to `0.0.0.0` and listens on `process.env.PORT` (Render dynamic port)
-- **Security**: Strict CORS for frontend Vercel domain, Helmet headers, Sliding JWT auth with refresh tokens, In-memory rate limiting, non-root user execution in Docker.
+- **Database**: PostgreSQL (Neon, Supabase, or any managed Postgres — see note in step 3)
+- **ORM**: Prisma, with `prisma migrate deploy` run automatically before each start
+- **File storage**: Cloudinary or S3-compatible (local disk storage does not persist across Render deploys/restarts — do not use `STORAGE_DRIVER=local` in production)
+- **Security**: Strict CORS allow-listing the Vercel frontend domain, Helmet headers, JWT auth with refresh tokens, rate limiting
 
 ---
 
-## 2. Environment Variables
+## 2. Backend Environment Variables (Render)
 
-Configure these variables in your Render Dashboard (**Environment** tab):
-
-| Variable | Type | Example / Description |
+| Variable | Required | Description |
 |---|---|---|
-| `NODE_ENV` | String | `production` |
-| `PORT` | Number | Automatically assigned by Render (default `4000` fallback) |
-| `HOST` | String | `0.0.0.0` |
-| `DATABASE_URL` | String | PostgreSQL Connection string (e.g. `postgresql://medikiosk:pass@ep-cool-db.us-east-1.aws.neon.tech/neondb?sslmode=require`) |
-| `JWT_SECRET` | String | High-entropy random secret (min 32 chars) for short-lived access tokens |
-| `JWT_REFRESH_SECRET` | String | High-entropy random secret for 7-day sliding refresh tokens |
-| `CORS_ORIGIN` | String | Frontend Vercel URL, e.g. `https://medikiosk.vercel.app` (or comma-separated) |
-| `LOG_LEVEL` | String | `info` (or `warn` in high-throughput production) |
-| `AI_PROVIDER` | String | `openrouter` (recommended), `openai`, or `mock` |
-| `OPENROUTER_API_KEY` | String | Required when `AI_PROVIDER=openrouter` — from [openrouter.ai/keys](https://openrouter.ai/keys) |
-| `OPENAI_API_KEY` | String | *(Optional)* If using OpenAI GPT-4o directly instead |
-| `STORAGE_DRIVER` | String | `cloudinary` (recommended), `s3`, or `local` (not durable on ephemeral hosts) |
-| `CLOUDINARY_CLOUD_NAME` | String | Required when `STORAGE_DRIVER=cloudinary` — from your Cloudinary Dashboard |
-| `CLOUDINARY_API_KEY` | String | Required when `STORAGE_DRIVER=cloudinary` |
-| `CLOUDINARY_API_SECRET` | String | Required when `STORAGE_DRIVER=cloudinary` |
-| `STORAGE_ENDPOINT` | String | *(s3 only)* Cloudflare R2 / AWS S3 S3-compatible endpoint |
-| `STORAGE_BUCKET` | String | *(s3 only)* `medikiosk-records` |
-| `STORAGE_ACCESS_KEY` | String | *(s3 only)* S3 Access Key ID |
-| `STORAGE_SECRET_KEY` | String | *(s3 only)* S3 Secret Access Key |
-| `ENABLE_SWAGGER` | String | `true` or `false` (enables `/docs` OpenAPI UI) |
+| `NODE_ENV` | Yes | `production` |
+| `HOST` | Yes | `0.0.0.0` |
+| `DATABASE_URL` | Yes | Your Postgres connection string |
+| `JWT_SECRET` | Yes | High-entropy secret (generate with `openssl rand -hex 32`) |
+| `JWT_REFRESH_SECRET` | Yes | Different high-entropy secret |
+| `BOOTSTRAP_ADMIN_KEY` | Yes | High-entropy secret gating the one-time admin-creation endpoint (see step 5) |
+| `FRONTEND_URL` | Yes | Your deployed Vercel URL, e.g. `https://medikiosk.vercel.app` |
+| `CORS_ORIGIN` | No | Extra comma-separated allowed origins (any `*.vercel.app` / `*.onrender.com` origin is always allowed) |
+| `AI_PROVIDER` | Yes | `openrouter` (recommended) or `openai` — real LLM summarization. `mock` disables real AI and simulates it instead. |
+| `OPENROUTER_API_KEY` | If using openrouter | From [openrouter.ai/keys](https://openrouter.ai/keys) |
+| `OPENAI_API_KEY` | If using openai | From platform.openai.com |
+| `STORAGE_DRIVER` | Yes | `cloudinary` (recommended) or `s3` |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | If cloudinary | From your Cloudinary dashboard |
+| `STORAGE_BUCKET` / `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` / `STORAGE_ENDPOINT` / `STORAGE_REGION` | If s3 | Your S3-compatible bucket credentials |
+| `LOG_LEVEL` | No | `info` |
+| `ENABLE_SWAGGER` | No | `false` recommended in production |
+
+The server refuses to start in production with a missing/placeholder `JWT_SECRET`, `JWT_REFRESH_SECRET`, `DATABASE_URL`, or `BOOTSTRAP_ADMIN_KEY` — this is enforced by `backend/src/config/env.ts`, not just documentation.
 
 ---
 
-## 3. Deploying on Render (Native Web Service)
+## 3. Deploy the Backend to Render
 
-### Step 1: Create a PostgreSQL Database on Render
-1. Navigate to your [Render Dashboard](https://dashboard.render.com).
-2. Click **New +** → **PostgreSQL**.
-3. Name: `medikiosk-postgres`.
-4. Region: Choose the region closest to your users (e.g., `Singapore` or `Frankfurt`).
-5. Plan: `Free` or `Starter`.
-6. Copy the **Internal Database URL** (or External Database URL if deploying across accounts).
+**Option A — Blueprint (fastest):** this repo includes `render.yaml` at the root. In the Render dashboard, choose **New + → Blueprint**, connect this repository, and Render will read `render.yaml` and create the web service for you. You'll still need to fill in the `sync: false` variables (database URL, frontend URL, AI/storage keys) in the dashboard after it's created.
 
-### Step 2: Create the Web Service
-1. Click **New +** → **Web Service**.
-2. Connect your Git repository (`final-hackathon` or `medikiosk`).
-3. Set the **Root Directory** to `backend`.
-4. **Environment**: `Node`.
-5. **Build Command**:
-   ```bash
-   npm install && npx prisma generate && npm run build
-   ```
-6. **Start Command**:
-   ```bash
-   npx prisma migrate deploy && npm run seed && npm run start
-   ```
-   *(Note: `npm run seed` populates AIIMS demo credentials, departments, and simulated patients for initial presentation).*
+**Option B — Manual:**
+1. In the [Render Dashboard](https://dashboard.render.com), click **New + → Web Service** and connect this repository.
+2. Set **Root Directory** to `backend`.
+3. **Environment**: `Node` (not Docker).
+4. **Build Command**: `npm install && npx prisma generate && npm run build`
+5. **Start Command**: `npx prisma migrate deploy && npm run start`
+6. **Health Check Path**: `/health`
+7. Add the environment variables from the table above.
 
-7. **Plan**: `Free` or `Starter`.
-
-### Step 3: Add Environment Variables
-Under the **Environment** tab of your new Web Service, add the variables listed in Section 2 above.
+**Database**: point `DATABASE_URL` at a real managed Postgres. [Neon](https://neon.tech) and [Supabase](https://supabase.com) both have durable free tiers and work well here. Avoid Render's own free Postgres for anything beyond a quick test — it is deleted after 30 days.
 
 ---
 
-## 4. Deploying via Docker (Render Docker Service)
+## 4. Deploy the Frontend to Vercel
 
-Render can build and run the provided multi-stage `Dockerfile`:
-
-1. Click **New +** → **Web Service**.
-2. Connect your Git repository.
-3. Select **Docker** environment.
-4. Set **Docker Context**: `backend`.
-5. Set **Dockerfile Path**: `backend/Dockerfile`.
-6. Add your environment variables.
-7. Click **Create Web Service**.
-
-The Dockerfile incorporates:
-- Multi-stage build for minimal image size (< 150 MB)
-- Non-root runtime user (`medikiosk`, UID 1001) for strict healthcare data isolation
-- Embedded OpenSSL libraries for Prisma query engine
+1. In the [Vercel Dashboard](https://vercel.com/new), import this repository.
+2. Set **Root Directory** to `frontend` (this repo is a monorepo — frontend and backend are siblings).
+3. Framework preset: Vite (auto-detected).
+4. Environment variable: `VITE_API_URL` = `https://<your-render-service>.onrender.com/api/v1`
+5. Deploy. `frontend/vercel.json` (already in the repo) rewrites all routes to `index.html` so client-side routing (React Router) works on refresh/deep links.
+6. Once deployed, go back to Render and set `FRONTEND_URL` (and optionally `CORS_ORIGIN`) to this Vercel URL, then redeploy the backend so CORS allows it.
 
 ---
 
-## 5. Automated CI/CD & Production Health Check
+## 5. Create Your First Real Admin Account
 
-Once deployed, verify the service is running and accepting traffic:
+There are no seeded demo accounts — `prisma/seed.ts` only creates operational reference data (hospital/departments/kiosk terminals), never patients or staff logins. After your first successful deploy, create your real admin account with the one-time bootstrap endpoint:
 
-### 1. Health Probe
 ```bash
-curl -i https://<your-render-app>.onrender.com/health
+curl -X POST https://<your-render-service>.onrender.com/api/v1/auth/bootstrap-admin \
+  -H "Content-Type: application/json" \
+  -H "X-Bootstrap-Key: <your BOOTSTRAP_ADMIN_KEY>" \
+  -d '{
+    "email": "you@yourhospital.org",
+    "password": "<a strong real password>",
+    "firstName": "Your",
+    "lastName": "Name"
+  }'
 ```
-Response:
+
+This endpoint automatically and permanently disables itself the moment any admin account exists — a leaked `BOOTSTRAP_ADMIN_KEY` after that point is harmless. Sign in with these credentials at `/login`, then create your real doctor and staff accounts from the Admin console (or extend the admin API to do so, if you haven't built that screen yet).
+
+---
+
+## 6. Verify the Deployment
+
+```bash
+curl -i https://<your-render-service>.onrender.com/health
+```
+
+Expected:
 ```json
 {
   "status": "HEALTHY",
   "service": "MediKiosk Clinical Core API",
-  "version": "1.0.0",
-  "timestamp": "2026-09-14T00:00:00.000Z",
   "database": "connected"
 }
 ```
 
-### 2. Interactive API Documentation (Swagger)
-Open in your browser:
-`https://<your-render-app>.onrender.com/docs`
+If `ENABLE_SWAGGER=true`, interactive API docs are at `/docs`.
 
 ---
 
-## 6. Zero-Downtime Database Migrations
+## 7. Ongoing Schema Migrations
 
-When pushing schema updates:
-1. Develop locally: `npx prisma migrate dev --name <migration_name>`
-2. Commit `prisma/migrations/` to Git.
-3. On Render deploy, the pre-deploy or release hook runs `npx prisma migrate deploy`, which applies migrations safely without data loss.
+1. Change `backend/prisma/schema.prisma` locally and run `npx prisma migrate dev --name <migration_name>`.
+2. Commit the generated `prisma/migrations/` folder.
+3. On the next Render deploy, the start command's `npx prisma migrate deploy` applies it automatically before the server boots.

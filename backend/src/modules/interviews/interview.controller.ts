@@ -1,10 +1,11 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { interviewService } from './interview.service.js';
 import { sendSuccess } from '../../shared/utils/response.js';
+import { resolvePatientIdForWrite } from '../../shared/utils/authorize.js';
 import { z } from 'zod';
 
 const createInterviewSchema = z.object({
-  patientId: z.string(),
+  patientId: z.string().optional(),
   sessionId: z.string(),
   departmentId: z.string().optional().default('general'),
 });
@@ -20,24 +21,26 @@ const submitAnswerSchema = z.object({
 });
 
 const completeInterviewSchema = z.object({
-  patientId: z.string(),
+  patientId: z.string().optional(),
 });
 
 export class InterviewController {
   async getOrCreate(request: FastifyRequest, reply: FastifyReply) {
     const data = createInterviewSchema.parse(request.body);
-    const result = await interviewService.getOrCreateInterview(data.patientId, data.sessionId, data.departmentId);
+    const patientId = resolvePatientIdForWrite(request, data.patientId);
+    const result = await interviewService.getOrCreateInterview(patientId, data.sessionId, data.departmentId);
     return sendSuccess(reply, result, 201, request.id);
   }
 
   async submitAnswer(request: FastifyRequest, reply: FastifyReply) {
     const { id } = request.params as { id: string };
     const data = submitAnswerSchema.parse(request.body);
+    const patientId = resolvePatientIdForWrite(request);
     const result = await interviewService.submitAnswer({
       interviewId: id,
       ...data,
       value: data.value ?? null,
-      patientId: request.user?.patientId,
+      patientId,
     });
     return sendSuccess(reply, result, 200, request.id);
   }
@@ -52,7 +55,8 @@ export class InterviewController {
   async complete(request: FastifyRequest, reply: FastifyReply) {
     const { id } = request.params as { id: string };
     const data = completeInterviewSchema.parse(request.body);
-    const result = await interviewService.completeInterview(id, data.patientId);
+    const patientId = resolvePatientIdForWrite(request, data.patientId);
+    const result = await interviewService.completeInterview(id, patientId);
     return sendSuccess(reply, result, 200, request.id);
   }
 }

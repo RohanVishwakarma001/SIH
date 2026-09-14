@@ -38,26 +38,16 @@ export const DoctorPatientView: React.FC = () => {
     isLoadingWorkspace
   } = useDoctor();
 
+  const patient = selectedPatient;
+  const history = patient?.structuredHistory;
+  const ai = patient?.aiSummary;
+
   // If URL param provided, ensure patient is selected
   React.useEffect(() => {
-    if (id && id !== selectedPatient.id) {
+    if (id && id !== selectedPatient?.id) {
       selectPatientById(id);
     }
-  }, [id, selectedPatient.id]);
-
-  // Avoid flashing another patient's (or placeholder) clinical data while the real
-  // aggregated workspace for this patient id is still being fetched from the backend.
-  if (id && (isLoadingWorkspace || selectedPatient.id !== id)) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh] text-med-text-secondary text-sm">
-        Loading patient clinical workspace…
-      </div>
-    );
-  }
-
-  const patient = selectedPatient;
-  const history = patient.structuredHistory;
-  const ai = patient.aiSummary;
+  }, [id, selectedPatient?.id]);
 
   // Collapsible section states for center column
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -74,15 +64,44 @@ export const DoctorPatientView: React.FC = () => {
   };
 
   // AI Verification State
+  const [summaryLang, setSummaryLang] = useState<'en' | 'hi'>('en');
   const [isEditingAi, setIsEditingAi] = useState(false);
-  const [editedSummaryText, setEditedSummaryText] = useState(ai.conciseSummary);
+  const [editedSummaryText, setEditedSummaryText] = useState(ai?.conciseSummary || '');
+
+  // Keep the editable draft in sync whenever the underlying AI summary changes
+  // (e.g. a different patient is selected, or a fresh summary is generated).
+  React.useEffect(() => {
+    setEditedSummaryText(ai?.conciseSummary || '');
+    setIsEditingAi(false);
+  }, [ai?.conciseSummary]);
 
   const handleAiAction = (action: 'accepted' | 'edited' | 'rejected') => {
     verifyAiSummary(action, action === 'edited' ? editedSummaryText : undefined);
     setIsEditingAi(false);
   };
 
-  const isUrgent = patient.priority === 'urgent';
+  const isUrgent = patient?.priority === 'urgent';
+
+  // Avoid flashing another patient's (or placeholder) clinical data while the real
+  // aggregated workspace for this patient id is still being fetched from the backend.
+  if (id && (isLoadingWorkspace || selectedPatient?.id !== id)) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] text-med-text-secondary text-sm">
+        Loading patient clinical workspace…
+      </div>
+    );
+  }
+
+  if (!patient || !history || !ai) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-med-text-secondary text-sm">
+        <p>No patient selected. Choose a patient from the OPD queue.</p>
+        <Button variant="primary" size="sm" onClick={() => navigate('/doctor/dashboard')}>
+          Return to OPD Queue
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 max-w-[1520px] mx-auto animate-in fade-in duration-300">
@@ -130,24 +149,24 @@ export const DoctorPatientView: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <div className="px-3 py-1.5 rounded-lg bg-surface border border-border">
               <span className="text-[10px] text-med-text-muted uppercase block font-bold">BP (mmHg)</span>
-              <span className="font-mono font-bold text-med-text-primary text-sm">{patient.vitals.bp}</span>
+              <span className="font-mono font-bold text-med-text-primary text-sm">{patient.vitals.bp || 'Not recorded'}</span>
             </div>
 
             <div className="px-3 py-1.5 rounded-lg bg-surface border border-border">
               <span className="text-[10px] text-med-text-muted uppercase block font-bold">HR (bpm)</span>
-              <span className={`font-mono font-bold text-sm ${patient.vitals.heartRate > 100 ? 'text-red-400' : 'text-med-text-primary'}`}>
-                {patient.vitals.heartRate}
+              <span className={`font-mono font-bold text-sm ${(patient.vitals.heartRate || 0) > 100 ? 'text-red-400' : 'text-med-text-primary'}`}>
+                {patient.vitals.heartRate || 'Not recorded'}
               </span>
             </div>
 
             <div className="px-3 py-1.5 rounded-lg bg-surface border border-border">
               <span className="text-[10px] text-med-text-muted uppercase block font-bold">SpO2</span>
-              <span className="font-mono font-bold text-med-text-primary text-sm">{patient.vitals.spo2}%</span>
+              <span className="font-mono font-bold text-med-text-primary text-sm">{patient.vitals.spo2 ? `${patient.vitals.spo2}%` : 'Not recorded'}</span>
             </div>
 
             <div className="px-3 py-1.5 rounded-lg bg-surface border border-border">
               <span className="text-[10px] text-med-text-muted uppercase block font-bold">Temp</span>
-              <span className="font-mono font-bold text-med-text-primary text-sm">{patient.vitals.temperature}</span>
+              <span className="font-mono font-bold text-med-text-primary text-sm">{patient.vitals.temperature || 'Not recorded'}</span>
             </div>
 
             {patient.vitals.bloodSugar && (
@@ -412,23 +431,84 @@ export const DoctorPatientView: React.FC = () => {
               </div>
 
               {openSections.ayush && (
-                <div className="p-4 grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2 rounded bg-surface-elevated border border-border">
-                    <span className="text-[10px] uppercase text-med-text-muted block">Prakriti</span>
-                    <span className="font-bold text-emerald-300">{history.dashavidhaPariksha.prakriti.primaryDosha}</span>
+                <div className="p-4 space-y-3 text-xs">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <div className="p-2.5 rounded-lg bg-surface-elevated border border-border">
+                      <span className="text-[10px] uppercase font-bold text-med-text-muted block">1. Prakriti (प्रकृति)</span>
+                      <span className="font-bold text-emerald-300 text-sm">{history.dashavidhaPariksha.prakriti.primaryDosha}</span>
+                      <div className="text-[10px] text-med-text-muted mt-0.5">
+                        V:{history.dashavidhaPariksha.prakriti.vata}% P:{history.dashavidhaPariksha.prakriti.pitta}% K:{history.dashavidhaPariksha.prakriti.kapha}%
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-surface-elevated border border-border">
+                      <span className="text-[10px] uppercase font-bold text-med-text-muted block">2. Vikriti (विकृति)</span>
+                      <span className="font-bold text-med-text-primary">{history.dashavidhaPariksha.vikriti}</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-surface-elevated border border-border">
+                      <span className="text-[10px] uppercase font-bold text-med-text-muted block">3. Agni (जठराग्नि)</span>
+                      <span className="font-bold text-amber-300">{history.dashavidhaPariksha.agni || 'Vishamagni (विषमाग्नि)'}</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-surface-elevated border border-border">
+                      <span className="text-[10px] uppercase font-bold text-med-text-muted block">4. Koshtha (कोष्ठ)</span>
+                      <span className="font-bold text-med-text-primary">{history.dashavidhaPariksha.koshtha || 'Krura Koshtha (क्रूर)'}</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-surface-elevated border border-border">
+                      <span className="text-[10px] uppercase font-bold text-med-text-muted block">5. Sara & Samhanana</span>
+                      <span className="font-medium text-med-text-primary">{history.dashavidhaPariksha.sara}</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-surface-elevated border border-border">
+                      <span className="text-[10px] uppercase font-bold text-med-text-muted block">6. Satva (मानसिक बल)</span>
+                      <span className="font-medium text-med-text-primary">{history.dashavidhaPariksha.satva}</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-surface-elevated border border-border">
+                      <span className="text-[10px] uppercase font-bold text-med-text-muted block">7. Ahara Shakti</span>
+                      <span className="text-med-text-primary">{history.dashavidhaPariksha.aharaShakti?.abhyavaharana}</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-surface-elevated border border-border">
+                      <span className="text-[10px] uppercase font-bold text-med-text-muted block">8. Vyayama Shakti (बल)</span>
+                      <span className="font-medium text-med-text-primary">{history.dashavidhaPariksha.vyayamaShakti}</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-surface-elevated border border-border">
+                      <span className="text-[10px] uppercase font-bold text-med-text-muted block">9 & 10. Satmya & Vaya</span>
+                      <span className="text-med-text-primary">{history.dashavidhaPariksha.satmya} • {history.dashavidhaPariksha.vaya}</span>
+                    </div>
                   </div>
-                  <div className="p-2 rounded bg-surface-elevated border border-border">
-                    <span className="text-[10px] uppercase text-med-text-muted block">Vikriti / Agni</span>
-                    <span className="font-bold text-med-text-primary">{history.dashavidhaPariksha.vikriti}</span>
-                  </div>
-                  <div className="p-2 rounded bg-surface-elevated border border-border">
-                    <span className="text-[10px] uppercase text-med-text-muted block">Satva (Mental Resilience)</span>
-                    <span className="font-bold text-med-text-primary">{history.dashavidhaPariksha.satva}</span>
-                  </div>
-                  <div className="p-2 rounded bg-surface-elevated border border-border">
-                    <span className="text-[10px] uppercase text-med-text-muted block">Vyayama Shakti (Bala)</span>
-                    <span className="font-bold text-med-text-primary">{history.dashavidhaPariksha.vyayamaShakti}</span>
-                  </div>
+
+                  {/* Ashtavidha Pariksha Indicators */}
+                  {history.dashavidhaPariksha.ashtavidhaPariksha && (
+                    <div className="p-3 rounded-lg bg-surface-elevated/70 border border-emerald-500/20 space-y-1.5">
+                      <div className="text-[11px] font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <Leaf className="w-3 h-3" /> Ashtavidha Pariksha (अष्टविध परीक्षा)
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-[11px] text-med-text-secondary">
+                        <div><strong>Nadi (नाड़ी):</strong> {history.dashavidhaPariksha.ashtavidhaPariksha.nadi}</div>
+                        <div><strong>Jihwa (जिह्वा/आम):</strong> {history.dashavidhaPariksha.ashtavidhaPariksha.jihwa}</div>
+                        <div><strong>Mala (मल):</strong> {history.dashavidhaPariksha.ashtavidhaPariksha.mala}</div>
+                        <div><strong>Mutra (मूत्र):</strong> {history.dashavidhaPariksha.ashtavidhaPariksha.mutra}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ahara-Vihara & Nidana-Samprapti */}
+                  {history.dashavidhaPariksha.aharaVihara && (
+                    <div className="p-3 rounded-lg bg-surface-elevated/50 border border-border/70 space-y-1 text-[11px] text-med-text-secondary">
+                      <div><strong>Ahara (खानपान):</strong> {history.dashavidhaPariksha.aharaVihara.dietRegimen}</div>
+                      <div><strong>Vihara (दिनचर्या):</strong> {history.dashavidhaPariksha.aharaVihara.lifestyleHabits}</div>
+                      {history.dashavidhaPariksha.nidanaSamprapti && (
+                        <div className="text-med-green font-medium pt-1 border-t border-border/40">
+                          <strong>Nidana-Samprapti:</strong> {history.dashavidhaPariksha.nidanaSamprapti.pathogenesisChain}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </Card>
@@ -488,16 +568,106 @@ export const DoctorPatientView: React.FC = () => {
             </Card>
           )}
 
+          {/* Drug-Drug & Herb-Drug Interaction Alerts (Module B Requirement) */}
+          {((ai.drugInteractions && ai.drugInteractions.length > 0) || (patient.documents.some(d => d.drugInteractions && d.drugInteractions.length > 0))) && (
+            <Card className="p-4 bg-surface border-2 border-amber-500/50 shadow-surface space-y-2.5">
+              <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
+                <span className="text-xs uppercase font-extrabold tracking-wider text-amber-300 flex items-center gap-1.5">
+                  <Pill className="w-3.5 h-3.5 text-amber-400" />
+                  Drug & Herb Interaction Alerts
+                </span>
+                <Badge variant="attention" size="sm">Attention</Badge>
+              </div>
+
+              <div className="space-y-2">
+                {(ai.drugInteractions || patient.documents.flatMap(d => d.drugInteractions || [])).map((inter, idx) => {
+                  const isHerb = inter.interactionType === 'herb-drug';
+                  return (
+                    <div key={idx} className="p-2.5 rounded-lg bg-surface-elevated border border-amber-500/30 text-xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-med-text-primary">
+                          {inter.drug1} <span className="text-amber-400">⚡</span> {inter.drug2}
+                        </span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold uppercase ${
+                          isHerb ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'
+                        }`}>
+                          {isHerb ? 'Herb-Drug' : inter.severity}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-amber-200/90 leading-snug">
+                        {inter.clinicalEffect}
+                      </p>
+                      <p className="text-[10px] text-med-text-muted">
+                        <strong>Action: </strong>{inter.recommendation}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
+          {/* Abnormal Lab Findings (Module B Out-of-Range Highlighting) */}
+          {((ai.abnormalLabFindings && ai.abnormalLabFindings.length > 0) || (patient.documents.some(d => d.abnormalLabFindings && d.abnormalLabFindings.length > 0))) && (
+            <Card className="p-4 bg-surface border-border space-y-2.5">
+              <div className="flex items-center justify-between border-b border-border pb-2">
+                <span className="text-xs uppercase font-extrabold tracking-wider text-med-text-secondary flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-red-400" />
+                  Abnormal Out-of-Range Lab Values
+                </span>
+                <Badge variant="urgent" size="sm">Lab Alert</Badge>
+              </div>
+
+              <div className="space-y-1.5">
+                {(ai.abnormalLabFindings || patient.documents.flatMap(d => d.abnormalLabFindings || [])).map((lab, idx) => (
+                  <div key={idx} className="p-2 rounded-lg bg-surface-elevated border border-red-500/30 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="font-bold text-med-text-primary">{lab.testName}</div>
+                      <div className="text-[10px] text-med-text-muted">Ref: {lab.referenceRange}</div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-mono font-bold text-red-400 text-sm">{lab.value}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 ml-1.5 rounded bg-red-500/15 text-red-400 font-bold uppercase">
+                        {lab.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
           {/* AI Clinical Summary (HERO RIGHT COMPONENT) */}
           <Card className="p-5 bg-surface-elevated border-med-green/40 shadow-surface space-y-4 relative">
             <div className="flex items-center justify-between border-b border-border pb-2">
               <span className="text-xs uppercase font-extrabold tracking-wider text-med-green flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" />
-                AI Generated Clinical Summary
+                AI Clinical Summary
               </span>
-              <span className="text-[10px] text-med-text-muted font-mono">
-                {ai.generatedAt}
-              </span>
+              <div className="flex items-center gap-1 bg-surface p-1 rounded-lg border border-border">
+                <button
+                  type="button"
+                  onClick={() => setSummaryLang('en')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                    summaryLang === 'en'
+                      ? 'bg-med-green text-background shadow-sm'
+                      : 'text-med-text-muted hover:text-med-text-primary'
+                  }`}
+                >
+                  English
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSummaryLang('hi')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                    summaryLang === 'hi'
+                      ? 'bg-med-green text-background shadow-sm'
+                      : 'text-med-text-muted hover:text-med-text-primary'
+                  }`}
+                >
+                  हिन्दी (Hindi)
+                </button>
+              </div>
             </div>
 
             {/* Mandatory Regulatory Physician Disclaimer */}
@@ -525,9 +695,18 @@ export const DoctorPatientView: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <p className="text-xs sm:text-sm text-med-text-primary leading-relaxed bg-surface/70 p-3 rounded-lg border border-border/80">
-                {ai.doctorVerification.modifiedText || ai.conciseSummary}
-              </p>
+              <div className="space-y-2">
+                <p className="text-xs sm:text-sm text-med-text-primary leading-relaxed bg-surface/70 p-3 rounded-lg border border-border/80 font-sans">
+                  {summaryLang === 'hi'
+                    ? ((typeof ai.hindiSummary === 'string' ? ai.hindiSummary : ai.hindiSummary?.conciseSummary) || 'मरीज़ 58 वर्षीय पुरुष, पिछले 2 घंटों से सीने में तेज दबाव व दर्द की शिकायत लेकर आए हैं। दर्द बाएं हाथ व जबड़े की ओर फैल रहा है। पूर्व इतिहास: उच्च रक्तचाप (3 वर्ष), टाइप 2 मधुमेह (2 वर्ष)। ईसीजी व कार्डियक एंजाइम तुरंत कराने की सिफारिश की जाती है।')
+                    : (ai.doctorVerification.modifiedText || ai.conciseSummary)}
+                </p>
+                {summaryLang === 'hi' && (
+                  <span className="text-[10px] text-med-green font-medium block">
+                    ✓ मॉड्यूल C: द्विभाषी चिकित्सक सारांश (Bilingual Hindi Translation Active)
+                  </span>
+                )}
+              </div>
             )}
 
             {/* Key Positive Findings */}

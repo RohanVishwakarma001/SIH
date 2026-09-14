@@ -46,6 +46,18 @@ export const api = {
     return data;
   },
 
+  async registerPatientAccount(patientData: { email: string; password: string; firstName: string; lastName: string; phone?: string; abhaId?: string }) {
+    const data = await apiClient.post<{ user: any; patient: any; token: string; refreshToken: string }>('/auth/patient/register', patientData);
+    apiClient.setToken(data.token, 'PATIENT', data.patient?.id || data.user?.id, `${data.user.firstName} ${data.user.lastName}`);
+    return data;
+  },
+
+  async loginPatientAccount(identifier: string, password: string) {
+    const data = await apiClient.post<{ user: any; patient: any; token: string; refreshToken: string }>('/auth/patient/login', { identifier, password });
+    apiClient.setToken(data.token, 'PATIENT', data.patient?.id || data.user?.id, `${data.user.firstName} ${data.user.lastName}`);
+    return data;
+  },
+
   async getCurrentUser() {
     return apiClient.get<{ user: any }>('/auth/me');
   },
@@ -302,5 +314,42 @@ export const api = {
 
   async getConsentRegistry() {
     return apiClient.get<{ registry: any[] }>('/admin/consent-registry');
+  },
+
+  // ==========================================
+  // PATIENT DASHBOARD & PORTAL
+  // ==========================================
+  async getPatientPortalProfile() {
+    return apiClient.get<any>('/patient-portal/profile');
+  },
+
+  async updatePatientPortalProfile(data: any) {
+    return apiClient.put<any>('/patient-portal/profile', data);
+  },
+
+  async getPatientPortalDocuments() {
+    return apiClient.get<{ documents: any[]; drugInteractions: any[] }>('/patient-portal/documents');
+  },
+
+  async storePatientPortalDocument(docData: {
+    title: string;
+    documentType: string;
+    facility?: string;
+    doctorName?: string;
+    date?: string;
+    file: File;
+  }) {
+    const formData = new FormData();
+    formData.append('file', docData.file);
+    formData.append('title', docData.title);
+    formData.append('documentType', docData.documentType);
+    if (docData.facility) formData.append('facility', docData.facility);
+    if (docData.doctorName) formData.append('doctorName', docData.doctorName);
+    if (docData.date) formData.append('date', docData.date);
+    return apiClient.upload<any>('/patient-portal/documents', formData);
+  },
+
+  async getPatientPortalRecords() {
+    return apiClient.get<{ timeline: any[]; summaries: any[]; consultations: any[] }>('/patient-portal/records');
   },
 };

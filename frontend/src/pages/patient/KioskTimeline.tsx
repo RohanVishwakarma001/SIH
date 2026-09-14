@@ -15,7 +15,6 @@ import { useKiosk } from '../../context/KioskContext';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { MOCK_PATIENTS } from '../../data/mockData';
 import { api } from '../../services/api';
 
 export const KioskTimeline: React.FC = () => {
@@ -37,8 +36,8 @@ export const KioskTimeline: React.FC = () => {
   ]);
 
   useEffect(() => {
-    const patId = authData.patientId || 'pat_001';
-    api.getPatientTimeline(patId)
+    if (!authData.patientId) return;
+    api.getPatientTimeline(authData.patientId)
       .then(res => {
         if (res?.timeline && Array.isArray(res.timeline) && res.timeline.length > 0) {
           setEvents(res.timeline as any);

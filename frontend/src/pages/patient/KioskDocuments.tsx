@@ -1,12 +1,11 @@
 import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  FileText, 
-  Camera, 
-  UploadCloud, 
-  CheckCircle2, 
-  ArrowRight, 
-  Sparkles, 
+import {
+  FileText,
+  UploadCloud,
+  CheckCircle2,
+  ArrowRight,
+  Sparkles,
   FileCheck,
   Clock,
   FolderOpen
@@ -18,7 +17,7 @@ import { Button } from '../../components/ui/Button';
 export const KioskDocuments: React.FC = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { simulateDocUpload, uploadDocumentFile } = useKiosk();
+  const { uploadDocumentFile } = useKiosk();
   const [selectedType, setSelectedType] = useState<'prescription' | 'lab_report' | 'discharge_summary'>('prescription');
 
   const handleFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,12 +26,6 @@ export const KioskDocuments: React.FC = () => {
 
     navigate('/patient/ocr-processing');
     await uploadDocumentFile(file, selectedType);
-  };
-
-  const handleSampleScan = async (type: 'prescription' | 'lab_report' | 'discharge_summary') => {
-    setSelectedType(type);
-    navigate('/patient/ocr-processing');
-    await simulateDocUpload(type);
   };
 
   return (
@@ -138,16 +131,6 @@ export const KioskDocuments: React.FC = () => {
             leftIcon={<FolderOpen className="w-4 h-4" />}
           >
             Choose Document File (PDF / Image)
-          </Button>
-
-          <Button
-            variant="secondary"
-            size="lg"
-            onClick={() => handleSampleScan(selectedType)}
-            className="w-full sm:w-auto font-semibold px-6"
-            leftIcon={<Camera className="w-4 h-4" />}
-          >
-            Scan Sample Document / डेमो पर्चा
           </Button>
         </div>
       </Card>

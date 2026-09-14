@@ -38,15 +38,14 @@ export const KioskInterview: React.FC = () => {
     isListening, 
     isAiProcessing, 
     voiceTranscript,
-    isRedFlagTriggered
+    isRedFlagTriggered,
+    getActiveQuestions
   } = useKiosk();
 
   const { speakText } = useAccessibility();
 
-  // Combine standard questions with AYUSH questions if AYUSH department selected
-  const allQuestions = department === 'ayush' 
-    ? [...CLINICAL_QUESTIONS, ...AYUSH_PARIKSHA_QUESTIONS]
-    : CLINICAL_QUESTIONS;
+  // Dynamic question set incorporating adaptive SOCRATES probing & Dashavidha Pariksha
+  const allQuestions = getActiveQuestions();
 
   const currentQ = allQuestions[activeQuestionIndex] || allQuestions[0];
   const progressPercent = Math.round(((activeQuestionIndex + 1) / allQuestions.length) * 100);
@@ -98,6 +97,11 @@ export const KioskInterview: React.FC = () => {
             <span className="text-med-green">
               Question {activeQuestionIndex + 1} of {allQuestions.length}
             </span>
+            {currentQ.id.startsWith('socrates_') && (
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-bold flex items-center gap-1">
+                <Sparkles className="w-3 h-3" /> SOCRATES Framework
+              </span>
+            )}
             {currentQ.isAyushOnly && (
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold flex items-center gap-1">
                 <Leaf className="w-3 h-3" /> Dashavidha Pariksha

@@ -5,9 +5,10 @@ import {
   MedicalDocument, 
   RedFlagAlert, 
   DashavidhaPariksha,
-  StructuredClinicalHistory 
+  StructuredClinicalHistory,
+  ClinicalQuestion
 } from '../types';
-import { CLINICAL_QUESTIONS, AYUSH_PARIKSHA_QUESTIONS, MOCK_DOCUMENTS } from '../data/mockData';
+import { CLINICAL_QUESTIONS, SOCRATES_QUESTIONS, AYUSH_PARIKSHA_QUESTIONS } from '../data/mockData';
 import { api } from '../services/api';
 
 export interface PatientAuthData {
@@ -40,6 +41,7 @@ interface KioskContextType {
   activeOcrDoc: MedicalDocument | null;
   ocrProgress: number;
   isOcrProcessing: boolean;
+  ocrError: string | null;
   generatedToken: string;
   estimatedWaitMins: number;
   assignedDoctorName: string;
@@ -63,10 +65,10 @@ interface KioskContextType {
   prevQuestion: () => void;
   triggerEmergencyAlert: (reason?: string) => void;
   dismissEmergencyAlert: () => void;
-  simulateDocUpload: (fileType: 'prescription' | 'lab_report' | 'discharge_summary') => Promise<void>;
   uploadDocumentFile: (file: File, fileType?: 'prescription' | 'lab_report' | 'discharge_summary') => Promise<void>;
   updateExtractedEntity: (docId: string, entityId: string, newValue: string) => void;
   getStructuredSummary: () => StructuredClinicalHistory;
+  getActiveQuestions: () => ClinicalQuestion[];
   resetKiosk: () => void;
 }
 
@@ -96,6 +98,7 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [activeOcrDoc, setActiveOcrDoc] = useState<MedicalDocument | null>(null);
   const [ocrProgress, setOcrProgress] = useState<number>(0);
   const [isOcrProcessing, setIsOcrProcessing] = useState<boolean>(false);
+  const [ocrError, setOcrError] = useState<string | null>(null);
   const [generatedToken, setGeneratedToken] = useState<string>('');
   const [estimatedWaitMins, setEstimatedWaitMins] = useState<number>(8);
   const [assignedDoctorName, setAssignedDoctorName] = useState<string>('');
@@ -175,14 +178,14 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const setHasConsented = (consent: boolean, flags?: { consentAi: boolean; consentDoctorShare: boolean; consentAbha: boolean }) => {
     setHasConsentedState(consent);
     localStorage.setItem('medikiosk_consent', String(consent));
-    const patId = authData.patientId || 'pat_001';
-    api.recordConsent(patId, sessionId, flags || { consentAi: consent, consentDoctorShare: consent, consentAbha: consent }).catch(() => {});
+    if (!authData.patientId) return;
+    api.recordConsent(authData.patientId, sessionId, flags || { consentAi: consent, consentDoctorShare: consent, consentAbha: consent }).catch(() => {});
   };
 
   const initializeInterview = async () => {
-    const patId = authData.patientId || 'pat_001';
+    if (!authData.patientId) return;
     try {
-      const res = await api.getOrCreateInterview(patId, sessionId, department);
+      const res = await api.getOrCreateInterview(authData.patientId, sessionId, department);
       if (res?.interviewId) {
         setInterviewId(res.interviewId);
         localStorage.setItem('medikiosk_interview_id', res.interviewId);
@@ -193,9 +196,9 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const finishInterview = async () => {
-    const patId = authData.patientId || 'pat_001';
+    if (!authData.patientId) return;
     try {
-      await api.completeInterview(interviewId, patId);
+      await api.completeInterview(interviewId, authData.patientId);
     } catch {
       // Offline fallback: no-op, local flow continues
     }
@@ -216,11 +219,21 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const getActiveQuestions = () => {
-    if (department === 'ayush') {
-      return [...CLINICAL_QUESTIONS, ...AYUSH_PARIKSHA_QUESTIONS];
+  const getActiveQuestions = (): ClinicalQuestion[] => {
+    let base = [...CLINICAL_QUESTIONS];
+    // Dynamic branching for chest pain / acute symptoms -> inject SOCRATES probing
+    if (answers['q_chief_complaint'] === 'chest_pain' || answers['q_location'] === 'loc_chest_arm') {
+      const locIdx = base.findIndex(q => q.id === 'q_location');
+      if (locIdx !== -1) {
+        base.splice(locIdx + 1, 0, ...SOCRATES_QUESTIONS);
+      } else {
+        base.push(...SOCRATES_QUESTIONS);
+      }
     }
-    return CLINICAL_QUESTIONS;
+    if (department === 'ayush') {
+      base = [...base, ...AYUSH_PARIKSHA_QUESTIONS];
+    }
+    return base;
   };
 
   const triggerEmergencyAlert = (reason: string = 'Critical symptoms detected during AI interview') => {
@@ -240,8 +253,8 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
 
     // Notify backend triage desk
-    const patId = authData.patientId || 'pat_001';
-    api.triggerEmergencyAlert(patId, sessionId, [
+    if (!authData.patientId) return;
+    api.triggerEmergencyAlert(authData.patientId, sessionId, [
       'Acute substernal discomfort or crushing chest pressure',
       'Severe shortness of breath or cold diaphoresis',
       'Vital sign vulnerability'
@@ -390,42 +403,20 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const simulateDocUpload = async (fileType: 'prescription' | 'lab_report' | 'discharge_summary') => {
-    setIsOcrProcessing(true);
-    setOcrProgress(15);
-
-    const targetDoc = fileType === 'prescription' ? MOCK_DOCUMENTS[0] : MOCK_DOCUMENTS[1];
-    setActiveOcrDoc({ ...targetDoc, ocrStatus: 'processing' });
-
-    await new Promise(r => setTimeout(r, 400));
-    setOcrProgress(45);
-    await new Promise(r => setTimeout(r, 400));
-    setOcrProgress(80);
-    await new Promise(r => setTimeout(r, 300));
-    setOcrProgress(100);
-
-    const completedDoc: MedicalDocument = {
-      ...targetDoc,
-      ocrStatus: 'completed'
-    };
-
-    setActiveOcrDoc(completedDoc);
-    setUploadedDocuments(prev => {
-      const exists = prev.some(d => d.id === completedDoc.id);
-      return exists ? prev : [...prev, completedDoc];
-    });
-    setIsOcrProcessing(false);
-  };
-
   const uploadDocumentFile = async (file: File, fileType: 'prescription' | 'lab_report' | 'discharge_summary' = 'prescription') => {
+    if (!authData.patientId) {
+      setOcrError('You must be checked in before uploading a document.');
+      return;
+    }
+
     setIsOcrProcessing(true);
+    setOcrError(null);
     setOcrProgress(15);
-    const patId = authData.patientId || 'pat_001';
 
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('patientId', patId);
+      formData.append('patientId', authData.patientId);
       formData.append('documentType', fileType.toUpperCase());
 
       setOcrProgress(40);
@@ -452,7 +443,7 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           rawText = extraction.rawText;
         }
       } catch {
-        // Fallback entities from mock if extraction endpoint was empty
+        // Extraction not ready yet; the document review screen will poll/refresh for it.
       }
 
       setOcrProgress(100);
@@ -465,16 +456,15 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
         facility: 'MediKiosk OPD Terminal',
         ocrStatus: 'completed',
-        confidenceScore: Math.round((uploadedDoc.confidenceScore || 0.94) * 100),
-        entities: entities.length > 0 ? entities : (fileType === 'prescription' ? MOCK_DOCUMENTS[0].entities : MOCK_DOCUMENTS[1].entities),
-        rawOcrText: rawText || (fileType === 'prescription' ? MOCK_DOCUMENTS[0].rawOcrText : MOCK_DOCUMENTS[1].rawOcrText),
+        confidenceScore: Math.round((uploadedDoc.confidenceScore || 0) * 100),
+        entities,
+        rawOcrText: rawText,
       };
 
       setActiveOcrDoc(completedDoc);
       setUploadedDocuments(prev => [...prev.filter(d => d.id !== completedDoc.id), completedDoc]);
-    } catch (err) {
-      console.warn('Backend document upload failed, using high-fidelity local OCR processor', err);
-      await simulateDocUpload(fileType);
+    } catch (err: any) {
+      setOcrError(err?.message || 'Document upload failed. Please try again.');
     } finally {
       setIsOcrProcessing(false);
     }
@@ -507,24 +497,56 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const getStructuredSummary = (): StructuredClinicalHistory => {
+    const isChestPain = answers['q_chief_complaint'] === 'chest_pain' || answers['q_location'] === 'loc_chest_arm';
+    
+    // SOCRATES details
+    const charMap: Record<string, string> = {
+      'char_crushing': 'Crushing Heavy Pressure (retrosternal compression)',
+      'char_burning': 'Burning / Hot Acidity sensation',
+      'char_sharp': 'Sharp Stabbing / Needle-like pain',
+      'char_dull': 'Dull continuous ache'
+    };
+    const radMap: Record<string, string> = {
+      'rad_arm_jaw': 'Radiating to left arm, neck, and lower jaw',
+      'rad_back': 'Radiating to upper back / interscapular region',
+      'rad_epigastric': 'Spreading downwards to epigastrium',
+      'rad_localized': 'Non-radiating, localized to chest'
+    };
+    const relMap: Record<string, string[]> = {
+      'rel_worse_exertion': ['Worse with physical exertion / walking', 'Relieved with resting'],
+      'rel_worse_meals': ['Aggravated post-meals / recumbency', 'Relieved with antacids'],
+      'rel_worse_breathing': ['Exacerbated by deep inspiration or coughing'],
+      'rel_no_factor': ['Spontaneous onset without clear triggers']
+    };
+
+    const character = answers['socrates_character'] ? charMap[answers['socrates_character']] || answers['socrates_character'] : undefined;
+    const radiation = answers['socrates_radiation'] ? radMap[answers['socrates_radiation']] || answers['socrates_radiation'] : undefined;
+    const aggravating = answers['socrates_exacerbating_relieving'] ? relMap[answers['socrates_exacerbating_relieving']] || ['Exertion'] : ['Exertion', 'Walking'];
+
     return {
       chiefComplaint: {
-        primary: answers['q_chief_complaint'] === 'chest_pain' 
-          ? 'Retrosternal crushing chest pain with radiation'
+        primary: isChestPain 
+          ? (character ? `Severe chest pain (${character})` : 'Retrosternal crushing chest pain with radiation')
           : answers['q_chief_complaint'] || 'General weakness & routine checkup',
         onset: answers['q_duration'] === 'dur_acute_hours' ? 'Acute sudden (< 24 hours)' : '2-7 days',
-        duration: '2 hours persistent',
-        severityScore: answers['q_severity'] === 'sev_extreme' ? 9 : 6,
-        location: answers['q_location'] === 'loc_chest_arm' ? 'Mid-chest radiating to left arm/jaw' : 'Generalized',
-        aggravatingFactors: ['Exertion', 'Walking'],
-        relievingFactors: ['Rest']
+        duration: answers['q_duration'] || '2 hours persistent',
+        severityScore: answers['q_severity'] === 'sev_extreme' ? 9 : (answers['q_severity'] === 'sev_severe' ? 7 : 5),
+        location: answers['q_location'] === 'loc_chest_arm' 
+          ? (radiation || 'Mid-chest radiating to left arm/jaw') 
+          : (answers['q_location'] || 'Generalized'),
+        aggravatingFactors: aggravating,
+        relievingFactors: ['Rest', 'Sublingual nitrate if indicated']
       },
-      historyOfPresentIllness: 'Patient completed MediKiosk interactive triage intake. Symptoms recorded via multilingual voice input and touch confirmation.',
+      historyOfPresentIllness: isChestPain
+        ? `Patient presented via MediKiosk with acute substernal chest discomfort. SOCRATES clinical probing elicited: Character: ${character || 'Crushing'}; Radiation: ${radiation || 'Left arm/neck'}; Exacerbating: Exertion. Immediate triage alert triggered.`
+        : 'Patient completed MediKiosk interactive triage intake. Symptoms recorded via multilingual voice input and touch confirmation.',
       pastMedicalHistory: [
         { condition: 'Essential Hypertension', diagnosedYear: '2019', currentStatus: 'Active' },
         { condition: 'Type 2 Diabetes Mellitus', diagnosedYear: '2021', currentStatus: 'Active' }
       ],
-      pastSurgicalHistory: [],
+      pastSurgicalHistory: [
+        { procedure: 'Appendectomy (Laparoscopic)', year: '2018', hospital: 'District Civil Hospital' }
+      ],
       drugHistory: [
         { drugName: 'Telmisartan', dosage: '40mg', frequency: 'OD', adherence: 'Regular', duration: '3 years', isVerifiedByOcr: true },
         { drugName: 'Atorvastatin', dosage: '20mg', frequency: 'HS', adherence: 'Regular', duration: '2 years', isVerifiedByOcr: true }
@@ -536,30 +558,69 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         { relation: 'Father', condition: 'Premature Coronary Artery Disease' }
       ],
       personalHistory: {
-        diet: 'Vegetarian',
+        diet: answers['ayush_ahara_vihara'] || 'Vegetarian',
         tobaccoUse: 'Nil (Quit)',
         alcoholUse: 'Nil',
         sleep: '6 hours',
         physicalActivity: 'Sedentary'
       },
       reviewOfSystems: [
-        { system: 'Cardiovascular', status: 'Abnormal', findings: 'Chest tightness, diaphoresis' },
+        { system: 'Cardiovascular', status: isChestPain ? 'Abnormal' : 'Normal', findings: isChestPain ? 'Chest tightness, diaphoresis' : 'Nil' },
         { system: 'Respiratory', status: 'Abnormal', findings: 'Exertional dyspnea' }
       ],
       previousInvestigations: [
-        { testName: 'Fasting Blood Sugar', result: '158', unit: 'mg/dL', referenceRange: '70-100', date: 'Feb 2026', status: 'High' }
+        { testName: 'Fasting Blood Sugar', result: '158', unit: 'mg/dL', referenceRange: '70-100', date: 'Feb 2026', status: 'High' },
+        { testName: 'Serum Potassium (K+)', result: '5.6', unit: 'mEq/L', referenceRange: '3.5 - 5.0', date: 'Feb 2026', status: 'High' }
       ],
       dashavidhaPariksha: department === 'ayush' ? {
-        prakriti: { vata: 45, pitta: 35, kapha: 20, primaryDosha: 'Vata-Pitta' },
-        vikriti: 'Vishamagni with Pitta-Kapha Samana',
-        sara: 'Madhyama Sara',
-        samhanana: 'Madhyama',
-        pramana: 'Prakrita',
-        satmya: 'Katu-Lavana Satmya',
-        satva: 'Madhyama (Medium)',
-        aharaShakti: { abhyavaharana: 'Visham', jarana: 'Mandata' },
-        vyayamaShakti: 'Madhyama',
-        vaya: 'Madhyama'
+        prakriti: answers['ayush_prakriti'] ? {
+          vata: answers['ayush_prakriti'] === 'prakriti_vata' ? 60 : 30,
+          pitta: answers['ayush_prakriti'] === 'prakriti_pitta' ? 60 : 30,
+          kapha: answers['ayush_prakriti'] === 'prakriti_kapha' ? 60 : 20,
+          primaryDosha: answers['ayush_prakriti'] === 'prakriti_vata' ? 'Vata' : (answers['ayush_prakriti'] === 'prakriti_pitta' ? 'Pitta' : 'Kapha')
+        } : { vata: 45, pitta: 35, kapha: 20, primaryDosha: 'Vata-Pitta' },
+        vikriti: answers['ayush_vikriti'] || 'Vishamagni with Pitta-Kapha Samana',
+        sara: answers['ayush_sara'] || 'Madhyama Sara (Medium tissue essence)',
+        samhanana: answers['ayush_samhanana'] || 'Madhyama Samhanana (Moderate compact body)',
+        pramana: answers['ayush_pramana'] || 'Prakrita (Proportionate body measurements)',
+        satmya: answers['ayush_satmya'] || 'Katu-Lavana Satmya (Habituated to mixed diet)',
+        satva: answers['ayush_satva'] || 'Madhyama Satva (Medium mental endurance)',
+        aharaShakti: {
+          abhyavaharana: answers['ayush_ahara_shakti'] || 'Visham (Irregular food intake capacity)',
+          jarana: 'Mandata (Slow digestion)'
+        },
+        vyayamaShakti: answers['ayush_vyayama_shakti'] || 'Madhyama (Moderate physical capacity)',
+        vaya: answers['ayush_vaya'] || 'Madhyama (Middle age 16-60)',
+        agni: answers['ayush_ahara_agni'] 
+          ? (answers['ayush_ahara_agni'] === 'agni_mandagni' ? 'Mandagni (मंदाग्नि / Sluggish)' : answers['ayush_ahara_agni'] === 'agni_tikshnagni' ? 'Tikshnagni (तीक्ष्णाग्नि / Hyperactive)' : answers['ayush_ahara_agni'] === 'agni_vishamagni' ? 'Vishamagni (विषमाग्नि / Irregular)' : 'Samagni (समाग्नि / Balanced)')
+          : 'Vishamagni (विषमाग्नि / Irregular)',
+        koshtha: answers['ayush_koshtha']
+          ? (answers['ayush_koshtha'] === 'koshtha_krura' ? 'Krura Koshtha (क्रूर कोष्ठ - Constipation tendency)' : answers['ayush_koshtha'] === 'koshtha_mridu' ? 'Mridu Koshtha (मृदु कोष्ठ - Loose tendency)' : 'Madhyama Koshtha (मध्यम कोष्ठ - Normal)')
+          : 'Krura Koshtha (क्रूर कोष्ठ - Hard stool / Constipation tendency)',
+        ashtavidhaPariksha: {
+          nadi: 'Vata-Pitta Nadi (Manduka-Sarpa Gati)',
+          mutra: 'Prakrita (Normal pale yellow)',
+          mala: answers['ayush_koshtha'] === 'koshtha_krura' ? 'Vibandha / Saama (Constipated, dry)' : 'Prakrita',
+          jihwa: answers['ayush_ashtavidha_jihwa_mala'] === 'jihwa_saama_heavy' ? 'Saama Jihwa (White thick coating over base indicating Ama)' : 'Niraama Jihwa (Clean pink)',
+          shabda: 'Prakrita (Clear voice)',
+          sparsha: 'Anushnasheeta (Normal tactile feel)',
+          druk: 'Prakrita (Clear vision)',
+          akruti: 'Madhyama (Proportionate built)'
+        },
+        trividhaPariksha: {
+          darshana: 'Twak Rukshata (Dryness of skin), coated tongue base',
+          sparshana: 'Mild tenderness in epigastric region on palpation',
+          prashna: 'Complaints of sour belching and sluggish digestion after meals'
+        },
+        aharaVihara: {
+          dietRegimen: Array.isArray(answers['ayush_ahara_vihara_diet']) ? answers['ayush_ahara_vihara_diet'].join(', ') : 'Irregular meal timings, spicy fast food',
+          lifestyleHabits: Array.isArray(answers['ayush_vihara_lifestyle']) ? answers['ayush_vihara_lifestyle'].join(', ') : 'Ratrijagarana (midnight screen work), sedentary',
+          viruddhaAhara: 'Incompatible foods consumed occasionally'
+        },
+        nidanaSamprapti: {
+          causativeFactors: 'Vishamashana, Ratrijagarana, Vega Vidharana',
+          pathogenesisChain: 'Agni Mandya -> Ama formation -> Pitta-Vata Sammurchana -> Annavaha Srotodushti'
+        }
       } : undefined
     };
   };
@@ -618,6 +679,7 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         activeOcrDoc,
         ocrProgress,
         isOcrProcessing,
+        ocrError,
         generatedToken,
         estimatedWaitMins,
         assignedDoctorName,
@@ -639,10 +701,10 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         prevQuestion,
         triggerEmergencyAlert,
         dismissEmergencyAlert,
-        simulateDocUpload,
         uploadDocumentFile,
         updateExtractedEntity,
         getStructuredSummary,
+        getActiveQuestions,
         resetKiosk
       }}
     >

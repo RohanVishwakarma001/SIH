@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ShieldCheck, 
-  Smartphone, 
-  UserPlus, 
-  ArrowRight, 
-  CheckCircle2, 
+import {
+  ShieldCheck,
+  Smartphone,
+  UserPlus,
+  ArrowRight,
+  CheckCircle2,
   KeyRound,
   IdCard,
   Sparkles,
-  AlertCircle,
-  FlaskConical
+  AlertCircle
 } from 'lucide-react';
 import { useKiosk, PatientAuthData } from '../../context/KioskContext';
 import { useAccessibility } from '../../context/AccessibilityContext';
@@ -38,25 +37,6 @@ export const KioskAuth: React.FC = () => {
   const [walkinAge, setWalkinAge] = useState<string>('');
   const [walkinGender, setWalkinGender] = useState<'Male' | 'Female' | 'Other'>('Male');
   const [walkinMobile, setWalkinMobile] = useState<string>('');
-
-  // Convenient demo test helper
-  const handleQuickDemoFill = () => {
-    setErrorMessage(null);
-    if (authMethod === 'abha') {
-      setAbhaInput('91-4829-1029-4412');
-      setOtpInput('4829');
-      setIsOtpSent(true);
-    } else if (authMethod === 'mobile') {
-      setMobileInput('9811243210');
-      setOtpInput('4829');
-      setIsOtpSent(true);
-    } else {
-      setWalkinName('Rameshwar Prasad Patel');
-      setWalkinAge('58');
-      setWalkinGender('Male');
-      setWalkinMobile('9811243210');
-    }
-  };
 
   const handleSendOtp = () => {
     setErrorMessage(null);
@@ -89,7 +69,7 @@ export const KioskAuth: React.FC = () => {
         return;
       }
       if (!otpInput.trim()) {
-        setErrorMessage(language === 'hi' ? 'कृपया प्राप्त ओटीपी दर्ज करें (उदा. 4829)।' : 'Please enter the verification OTP (e.g. 4829).');
+        setErrorMessage(language === 'hi' ? 'कृपया सत्यापन कोड दर्ज करें।' : 'Please enter the verification code.');
         return;
       }
     } else if (authMethod === 'mobile') {
@@ -98,7 +78,7 @@ export const KioskAuth: React.FC = () => {
         return;
       }
       if (!otpInput.trim()) {
-        setErrorMessage(language === 'hi' ? 'कृपया प्राप्त ओटीपी दर्ज करें (उदा. 4829)।' : 'Please enter the verification OTP (e.g. 4829).');
+        setErrorMessage(language === 'hi' ? 'कृपया सत्यापन कोड दर्ज करें।' : 'Please enter the verification code.');
         return;
       }
     } else if (authMethod === 'walkin') {
@@ -232,20 +212,6 @@ export const KioskAuth: React.FC = () => {
 
       {/* Form Container */}
       <Card className="w-full p-6 sm:p-8 space-y-6 bg-surface-elevated border-border">
-        {/* Quick Demo Helper */}
-        <div className="flex items-center justify-between pb-3 border-b border-border/80">
-          <span className="text-xs text-med-text-muted">Enter your actual patient details:</span>
-          <button
-            type="button"
-            onClick={handleQuickDemoFill}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-med-green/10 hover:bg-med-green/20 text-med-green border border-med-green/30 text-xs font-semibold transition-all"
-            title="Auto-fill sample test credentials"
-          >
-            <FlaskConical className="w-3.5 h-3.5" />
-            <span>Fill Demo Credentials</span>
-          </button>
-        </div>
-
         {/* Inline Error Banner */}
         {errorMessage && (
           <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-2 text-xs text-red-300">
@@ -261,8 +227,8 @@ export const KioskAuth: React.FC = () => {
               <label className="text-sm font-bold text-med-text-primary flex items-center gap-2">
                 <span>14-Digit ABHA Number / आभा संख्या</span>
               </label>
-              <span className="text-[11px] px-2 py-0.5 rounded bg-med-green/10 text-med-green border border-med-green/20 font-semibold flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5" /> ABDM Linked
+              <span className="text-[11px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5" /> ABDM Sandbox
               </span>
             </div>
 
@@ -274,7 +240,7 @@ export const KioskAuth: React.FC = () => {
                   setAbhaInput(e.target.value);
                   setErrorMessage(null);
                 }}
-                placeholder="e.g. 91-4829-1029-4412"
+                placeholder="e.g. 14-1234-5678-9012"
                 className="w-full h-14 px-4 text-xl font-mono tracking-wider bg-surface rounded-xl border border-border focus:border-med-green focus:ring-1 focus:ring-med-green outline-none text-med-text-primary"
               />
             </div>
@@ -303,11 +269,12 @@ export const KioskAuth: React.FC = () => {
                     setOtpInput(e.target.value);
                     setErrorMessage(null);
                   }}
-                  placeholder="4829"
+                  placeholder="Enter code"
                   className="w-36 h-12 text-center text-xl font-mono tracking-widest bg-surface rounded-xl border border-border text-med-text-primary focus:border-med-green outline-none"
                 />
-                <span className="text-xs text-med-text-muted flex items-center gap-1">
-                  <KeyRound className="w-3.5 h-3.5 text-med-green" /> (Test OTP: 4829)
+                <span className="text-[11px] text-amber-300/90 flex items-center gap-1 leading-snug">
+                  <KeyRound className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  ABDM OTP gateway not yet connected — any code is accepted in sandbox mode.
                 </span>
               </div>
             </div>
@@ -360,11 +327,12 @@ export const KioskAuth: React.FC = () => {
                     setOtpInput(e.target.value);
                     setErrorMessage(null);
                   }}
-                  placeholder="4829"
+                  placeholder="Enter code"
                   className="w-36 h-12 text-center text-xl font-mono tracking-widest bg-surface rounded-xl border border-border text-med-text-primary focus:border-med-green outline-none"
                 />
-                <span className="text-xs text-med-text-muted flex items-center gap-1">
-                  <KeyRound className="w-3.5 h-3.5 text-med-green" /> (Test OTP: 4829)
+                <span className="text-[11px] text-amber-300/90 flex items-center gap-1 leading-snug">
+                  <KeyRound className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  SMS gateway not yet connected — any code is accepted in sandbox mode.
                 </span>
               </div>
             </div>
@@ -383,7 +351,7 @@ export const KioskAuth: React.FC = () => {
                   setWalkinName(e.target.value);
                   setErrorMessage(null);
                 }}
-                placeholder="e.g. Rameshwar Prasad Patel"
+                placeholder="Enter full name as per ID"
                 className="w-full h-12 px-4 mt-1 bg-surface rounded-xl border border-border text-med-text-primary outline-none focus:border-med-green"
               />
             </div>

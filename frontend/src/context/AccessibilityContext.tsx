@@ -5,9 +5,13 @@ interface AccessibilityContextType {
   isHighContrast: boolean;
   isAudioMode: boolean;
   isSpeaking: boolean;
+  isSignAvatarOpen: boolean;
+  avatarSpeechText: string;
   toggleLargeText: () => void;
   toggleHighContrast: () => void;
   toggleAudioMode: () => void;
+  toggleSignAvatar: () => void;
+  setAvatarSpeechText: (text: string) => void;
   speakText: (text: string, langCode?: string) => void;
   stopSpeaking: () => void;
 }
@@ -19,6 +23,8 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isHighContrast, setIsHighContrast] = useState(false);
   const [isAudioMode, setIsAudioMode] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isSignAvatarOpen, setIsSignAvatarOpen] = useState(false);
+  const [avatarSpeechText, setAvatarSpeechText] = useState('');
 
   useEffect(() => {
     if (isLargeText) {
@@ -38,6 +44,7 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const toggleLargeText = () => setIsLargeText(prev => !prev);
   const toggleHighContrast = () => setIsHighContrast(prev => !prev);
+  const toggleSignAvatar = () => setIsSignAvatarOpen(prev => !prev);
   const toggleAudioMode = () => {
     setIsAudioMode(prev => {
       if (prev) {
@@ -78,6 +85,7 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
 
+    setAvatarSpeechText(text);
     window.speechSynthesis.speak(utterance);
   };
 
@@ -88,9 +96,13 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
         isHighContrast,
         isAudioMode,
         isSpeaking,
+        isSignAvatarOpen,
+        avatarSpeechText,
         toggleLargeText,
         toggleHighContrast,
         toggleAudioMode,
+        toggleSignAvatar,
+        setAvatarSpeechText,
         speakText,
         stopSpeaking
       }}
