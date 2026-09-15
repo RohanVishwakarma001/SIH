@@ -281,6 +281,9 @@ export const KioskInterview: React.FC = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {currentQ.options?.map(option => {
+            const localizedOptionLabel = language === 'en'
+              ? undefined
+              : (option.nativeLabel?.[language] || option.nativeLabel?.hi);
             const isMulti = currentQ.inputType === 'multi_choice';
             const isSelected = isMulti 
               ? Array.isArray(currentAnswer) && currentAnswer.includes(option.id)
@@ -315,7 +318,7 @@ export const KioskInterview: React.FC = () => {
 
                 <div className="flex-1">
                   <div className="font-bold text-base text-med-text-primary flex items-center gap-2">
-                    {option.nativeLabel || option.label}
+                    {localizedOptionLabel || option.label}
                     {option.isRedFlag && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 font-bold">
                         Alert
@@ -323,7 +326,7 @@ export const KioskInterview: React.FC = () => {
                     )}
                   </div>
 
-                  {option.nativeLabel && (
+                  {localizedOptionLabel && (
                     <div className="text-xs text-med-text-secondary mt-0.5">
                       {option.label}
                     </div>

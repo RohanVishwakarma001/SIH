@@ -72,6 +72,15 @@ interface KioskContextType {
   resetKiosk: () => void;
 }
 
+const BCP47_LANG_MAP: Record<LanguageCode, string> = {
+  en: 'en-IN',
+  hi: 'hi-IN',
+  mr: 'mr-IN',
+  ta: 'ta-IN',
+  te: 'te-IN',
+  bn: 'bn-IN'
+};
+
 const KioskContext = createContext<KioskContextType | undefined>(undefined);
 
 export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -335,6 +344,52 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
+  // Matches a raw speech transcript against the current question's options (label,
+  // sublabel, and every language's nativeLabel) using substring/word-overlap scoring,
+  // and applies the best match the same way a tap would. Runs entirely offline against
+  // data already in mockData.ts — no AI call needed for this simple keyword match.
+  const matchVoiceAnswerToOption = (transcript: string) => {
+    const currentQ = getActiveQuestions()[activeQuestionIndex];
+    if (!currentQ?.options?.length) return;
+
+    const normalize = (s: string) => s.toLowerCase().trim();
+    const spoken = normalize(transcript);
+    if (!spoken) return;
+
+    let bestMatch: { id: string; score: number; isRedFlag?: boolean } | null = null;
+
+    currentQ.options.forEach(option => {
+      const candidates = [option.label, option.sublabel, ...Object.values(option.nativeLabel || {})]
+        .filter((s): s is string => !!s)
+        .map(normalize);
+
+      candidates.forEach(candidate => {
+        let score = 0;
+        if (spoken.includes(candidate) || candidate.includes(spoken)) {
+          score = candidate.length;
+        } else {
+          const words = candidate.split(/\s+/).filter(w => w.length > 2);
+          const matchedWords = words.filter(w => spoken.includes(w));
+          if (matchedWords.length > 0) {
+            score = matchedWords.join('').length;
+          }
+        }
+        if (score > 0 && (!bestMatch || score > bestMatch.score)) {
+          bestMatch = { id: option.id, score, isRedFlag: option.isRedFlag };
+        }
+      });
+    });
+
+    if (bestMatch) {
+      const match = bestMatch as { id: string; score: number; isRedFlag?: boolean };
+      if (currentQ.inputType === 'multi_choice') {
+        toggleMultiOption(currentQ.id, match.id, match.isRedFlag);
+      } else {
+        selectOption(currentQ.id, match.id, match.isRedFlag);
+      }
+    }
+  };
+
   const startVoiceListening = () => {
     setIsListening(true);
     setVoiceTranscript('');
@@ -343,14 +398,17 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (SpeechRecognition) {
       try {
         const recognition = new SpeechRecognition();
-        recognition.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
+        recognition.lang = BCP47_LANG_MAP[language] || 'en-IN';
         recognition.continuous = false;
         recognition.interimResults = true;
+
+        let finalTranscript = '';
 
         recognition.onresult = (event: any) => {
           const text = Array.from(event.results)
             .map((r: any) => r[0].transcript)
             .join('');
+          finalTranscript = text;
           setVoiceTranscript(text);
         };
 
@@ -359,6 +417,9 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setIsAiProcessing(true);
           setTimeout(() => {
             setIsAiProcessing(false);
+            if (finalTranscript.trim()) {
+              matchVoiceAnswerToOption(finalTranscript);
+            }
           }, 800);
         };
 
@@ -375,11 +436,15 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Safe non-intrusive fallback if browser speech recognition is not supported
     setIsListening(false);
-    setVoiceTranscript(
-      language === 'hi'
-        ? 'आवाज़ रिकॉर्डर उपलब्ध नहीं है। कृपया नीचे दिए गए विकल्पों को स्पर्श करके चुनें।'
-        : 'Voice input not supported in this browser. Please tap an option below.'
-    );
+    const unsupportedMessages: Record<LanguageCode, string> = {
+      en: 'Voice input not supported in this browser. Please tap an option below.',
+      hi: 'आवाज़ रिकॉर्डर उपलब्ध नहीं है। कृपया नीचे दिए गए विकल्पों को स्पर्श करके चुनें।',
+      mr: 'आवाज रेकॉर्डर उपलब्ध नाही. कृपया खालील पर्यायाला स्पर्श करा.',
+      ta: 'குரல் உள்ளீடு இந்த உலாவியில் கிடைக்கவில்லை. கீழே உள்ள விருப்பத்தைத் தட்டவும்.',
+      te: 'వాయిస్ ఇన్‌పుట్ ఈ బ్రౌజర్‌లో అందుబాటులో లేదు. దయచేసి కింద ఉన్న ఎంపికను నొక్కండి.',
+      bn: 'এই ব্রাউজারে ভয়েস ইনপুট সমর্থিত নয়। অনুগ্রহ করে নিচের একটি বিকল্প স্পর্শ করুন।'
+    };
+    setVoiceTranscript(unsupportedMessages[language] || unsupportedMessages.en);
   };
 
   const stopVoiceListening = () => {

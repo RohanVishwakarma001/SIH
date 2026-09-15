@@ -7,4 +7,5 @@ export async function ocrRoutes(fastify: FastifyInstance) {
   fastify.get('/status/:jobId', { preHandler: [authenticate] }, ocrController.getStatus.bind(ocrController));
   fastify.get('/:id/extraction', { preHandler: [authenticate] }, ocrController.getExtraction.bind(ocrController));
   fastify.patch('/:id/extraction', { preHandler: [authenticate] }, ocrController.correctEntity.bind(ocrController));
+  fastify.post('/:id/verify', { preHandler: [authenticate] }, ocrController.verifyEntity.bind(ocrController));
 }

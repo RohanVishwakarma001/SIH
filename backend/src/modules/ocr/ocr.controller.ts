@@ -8,6 +8,10 @@ const correctEntitySchema = z.object({
   correctedValue: z.string().min(1),
 });
 
+const verifyEntitySchema = z.object({
+  entityId: z.string().min(1),
+});
+
 export class OcrController {
   async process(request: FastifyRequest, reply: FastifyReply) {
     const { documentId } = request.params as { documentId: string };
@@ -31,6 +35,13 @@ export class OcrController {
     const { id } = request.params as { id: string };
     const data = correctEntitySchema.parse(request.body);
     const result = await ocrService.correctEntity(id, data.entityId, data.correctedValue, request.user?.userId);
+    return sendSuccess(reply, result, 200, request.id);
+  }
+
+  async verifyEntity(request: FastifyRequest, reply: FastifyReply) {
+    const { id } = request.params as { id: string };
+    const data = verifyEntitySchema.parse(request.body);
+    const result = await ocrService.verifyEntity(id, data.entityId, request.user?.userId);
     return sendSuccess(reply, result, 200, request.id);
   }
 }

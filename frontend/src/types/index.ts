@@ -45,7 +45,7 @@ export interface RedFlagAlert {
 export interface ClinicalOption {
   id: string;
   label: string;
-  nativeLabel?: string;
+  nativeLabel?: Partial<Record<LanguageCode, string>>;
   sublabel?: string;
   icon?: string;
   isRedFlag?: boolean;

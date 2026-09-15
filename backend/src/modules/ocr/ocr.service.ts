@@ -95,6 +95,36 @@ export class OcrService {
     };
   }
 
+  async verifyEntity(documentId: string, entityId: string, userId?: string) {
+    const entity = await prisma.medicalEntity.findUnique({ where: { id: entityId } });
+    if (!entity || entity.documentId !== documentId) throw new NotFoundError('MedicalEntity', entityId);
+
+    const updated = await prisma.medicalEntity.update({
+      where: { id: entityId },
+      data: { isVerified: true },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: userId || 'kiosk_patient',
+        actorName: 'Clinical Operator',
+        role: userId ? 'DOCTOR' : 'PATIENT',
+        action: 'OCR_ENTITY_VERIFIED',
+        resource: 'MedicalEntity',
+        resourceId: entityId,
+        details: `Entity value "${entity.value}" confirmed correct as extracted, without modification.`,
+      },
+    });
+
+    return {
+      documentId,
+      entityId,
+      value: updated.value,
+      isVerified: updated.isVerified,
+      verifiedAt: new Date().toISOString(),
+    };
+  }
+
   async correctEntity(documentId: string, entityId: string, correctedValue: string, userId?: string) {
     const entity = await prisma.medicalEntity.findUnique({ where: { id: entityId } });
     if (!entity || entity.documentId !== documentId) throw new NotFoundError('MedicalEntity', entityId);
